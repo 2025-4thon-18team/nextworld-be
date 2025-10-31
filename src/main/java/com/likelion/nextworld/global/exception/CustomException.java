@@ -1,6 +1,7 @@
 package com.likelion.nextworld.global.exception;
 
 import com.likelion.nextworld.global.exception.model.BaseErrorCode;
+
 import lombok.Getter;
 
 @Getter

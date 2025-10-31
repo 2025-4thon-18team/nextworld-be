@@ -9,5 +9,4 @@ public class NextworldApplication {
   public static void main(String[] args) {
     SpringApplication.run(NextworldApplication.class, args);
   }
-
 }
