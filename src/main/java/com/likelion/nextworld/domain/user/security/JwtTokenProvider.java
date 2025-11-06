@@ -21,20 +21,20 @@ public class JwtTokenProvider {
 
   private final Key key = Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
 
-  // Access Token 생성
-  public String generateAccessToken(String email) {
+  // Access Token 생성 (userId 기반)
+  public String generateAccessToken(Long userId) {
     return Jwts.builder()
-        .setSubject(email)
+        .setSubject(String.valueOf(userId))
         .setIssuedAt(new Date())
         .setExpiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRATION))
         .signWith(key, SignatureAlgorithm.HS256)
         .compact();
   }
 
-  // Refresh Token 생성
-  public String generateRefreshToken(String email) {
+  // Refresh Token 생성 (userId 기반)
+  public String generateRefreshToken(Long userId) {
     return Jwts.builder()
-        .setSubject(email)
+        .setSubject(String.valueOf(userId))
         .setIssuedAt(new Date())
         .setExpiration(new Date(System.currentTimeMillis() + REFRESH_TOKEN_EXPIRATION))
         .signWith(key, SignatureAlgorithm.HS256)
@@ -51,9 +51,9 @@ public class JwtTokenProvider {
     }
   }
 
-  // 토큰에서 이메일 추출
-  public String getEmailFromToken(String token) {
+  // userId 추출
+  public Long getUserIdFromToken(String token) {
     Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
-    return claims.getSubject();
+    return Long.parseLong(claims.getSubject());
   }
 }
