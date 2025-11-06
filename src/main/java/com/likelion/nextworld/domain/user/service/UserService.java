@@ -58,8 +58,8 @@ public class UserService {
       throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
     }
 
-    String accessToken = jwtTokenProvider.generateAccessToken(user.getEmail());
-    String refreshToken = jwtTokenProvider.generateRefreshToken(user.getEmail());
+    String accessToken = jwtTokenProvider.generateAccessToken(user.getUserId());
+    String refreshToken = jwtTokenProvider.generateRefreshToken(user.getUserId());
 
     return new LoginResponse(accessToken, refreshToken, user.getEmail(), user.getNickname());
   }
@@ -79,8 +79,8 @@ public class UserService {
       throw new IllegalArgumentException("만료된 리프레시 토큰입니다.");
     }
 
-    String email = jwtTokenProvider.getEmailFromToken(refreshToken);
-    return jwtTokenProvider.generateAccessToken(email);
+    Long userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
+    return jwtTokenProvider.generateAccessToken(userId);
   }
 
   // 내 정보 조회
@@ -89,10 +89,10 @@ public class UserService {
       throw new IllegalArgumentException("유효하지 않은 토큰입니다.");
     }
 
-    String email = jwtTokenProvider.getEmailFromToken(token);
+    Long userId = jwtTokenProvider.getUserIdFromToken(token);
     User user =
         userRepository
-            .findByEmail(email)
+            .findById(userId)
             .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
     return new UserProfileResponse(user);
@@ -104,10 +104,10 @@ public class UserService {
       throw new IllegalArgumentException("유효하지 않은 토큰입니다.");
     }
 
-    String email = jwtTokenProvider.getEmailFromToken(token);
+    Long userId = jwtTokenProvider.getUserIdFromToken(token);
     User user =
         userRepository
-            .findByEmail(email)
+            .findById(userId)
             .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
     if (request.getNickname() != null && !request.getNickname().isBlank()) {
