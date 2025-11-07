@@ -34,10 +34,10 @@ public class PostService {
       throw new IllegalArgumentException("유효하지 않은 토큰 형식입니다.");
     }
     String actualToken = token.substring(7);
-    String email = jwtTokenProvider.getEmailFromToken(actualToken);
+    Long userId = jwtTokenProvider.getUserIdFromToken(actualToken);
 
     return userRepository
-        .findByEmail(email)
+        .findById(userId)
         .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
   }
 

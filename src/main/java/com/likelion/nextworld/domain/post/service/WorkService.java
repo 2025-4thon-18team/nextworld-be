@@ -31,10 +31,10 @@ public class WorkService {
     }
 
     String actualToken = token.substring(7);
-    String email = jwtTokenProvider.getEmailFromToken(actualToken);
+    Long userId = jwtTokenProvider.getUserIdFromToken(actualToken);
 
     return userRepository
-        .findByEmail(email)
+        .findById(userId)
         .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
   }
 
@@ -48,9 +48,9 @@ public class WorkService {
       throw new RuntimeException("Invalid or expired token");
     }
 
-    String email = jwtTokenProvider.getEmailFromToken(token);
+    Long userId = jwtTokenProvider.getUserIdFromToken(token);
     User author =
-        userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+        userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
 
     Work work = new Work();
     work.setTitle(req.getTitle());
