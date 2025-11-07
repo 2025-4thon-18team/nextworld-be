@@ -5,8 +5,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.likelion.nextworld.domain.payment.entity.Pay;
 import com.likelion.nextworld.domain.payment.repository.PayRepository;
-import com.likelion.nextworld.domain.post.entity.DerivativeWork;
-import com.likelion.nextworld.domain.post.repository.DerivativeWorkRepository;
+import com.likelion.nextworld.domain.post.entity.Post;
+import com.likelion.nextworld.domain.post.repository.PostRepository;
 import com.likelion.nextworld.domain.revenue.entity.RevenueShare;
 import com.likelion.nextworld.domain.revenue.repository.RevenueShareRepository;
 import com.likelion.nextworld.domain.user.entity.User;
@@ -20,27 +20,24 @@ public class RevenueService {
 
   private final PayRepository payRepository;
   private final RevenueShareRepository revenueShareRepository;
-  private final DerivativeWorkRepository derivativeWorkRepository;
+  private final PostRepository postRepository;
   private final UserRepository userRepository;
 
-  /** 수익 분배: 작가 40%, 2차 창작자 30%, 플랫폼 관리자 30% */
+  /** 수익 분배: 원작자 40%, 2차 창작자 30%, 플랫폼 30% */
   @Transactional
-  public void distribute(Long payId, Long derivativeWorkId) {
+  public void distribute(Long payId, Long derivativePostId) {
 
     Pay pay =
         payRepository.findById(payId).orElseThrow(() -> new IllegalArgumentException("결제 내역 없음"));
 
-    // 2차 창작물 정보
-    DerivativeWork work =
-        derivativeWorkRepository
-            .findById(derivativeWorkId)
-            .orElseThrow(() -> new IllegalArgumentException("2차 창작물 없음"));
+    Post post =
+        postRepository
+            .findById(derivativePostId)
+            .orElseThrow(() -> new IllegalArgumentException("2차 창작물(Post) 없음"));
 
-    // 1차 창작자
-    User originalAuthor = work.getAuthor();
+    User originalAuthor = post.getParentWork().getAuthor();
 
-    // 2차 창작자
-    User derivativeAuthor = work.getDAuthor();
+    User derivativeAuthor = post.getAuthor();
 
     // 플랫폼 관리자 (id=1)
     User platformAdmin =
@@ -53,7 +50,6 @@ public class RevenueService {
     long derivativeShare = amount * 30 / 100;
     long platformShare = amount * 30 / 100;
 
-    // ---- RevenueShare 저장 ----
     revenueShareRepository.save(
         RevenueShare.builder().pay(pay).author(originalAuthor).shareAmount(authorShare).build());
 
