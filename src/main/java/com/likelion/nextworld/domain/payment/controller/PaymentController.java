@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.likelion.nextworld.domain.payment.dto.ChargeRequest;
+import com.likelion.nextworld.domain.payment.dto.RefundRequest;
 import com.likelion.nextworld.domain.payment.dto.UseRequest;
 import com.likelion.nextworld.domain.payment.dto.VerifyRequest;
 import com.likelion.nextworld.domain.payment.service.PaymentService;
@@ -41,5 +42,12 @@ public class PaymentController {
       @AuthenticationPrincipal UserPrincipal user, @RequestBody UseRequest req) {
     paymentService.use(user, req);
     return ResponseEntity.ok().build();
+  }
+
+  @PostMapping("/refund")
+  public ResponseEntity<String> requestRefund(
+      @AuthenticationPrincipal UserPrincipal user, @RequestBody RefundRequest request) {
+    paymentService.requestRefund(request, user.getId());
+    return ResponseEntity.ok("환불 요청이 접수되었습니다. 관리자의 승인을 기다려주세요.");
   }
 }

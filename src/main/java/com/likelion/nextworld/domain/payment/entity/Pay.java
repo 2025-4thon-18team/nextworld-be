@@ -47,4 +47,8 @@ public class Pay {
   void prePersist() {
     if (createdAt == null) createdAt = LocalDateTime.now();
   }
+
+  public void setStatus(PayStatus status) {
+    this.payStatus = status;
+  }
 }
