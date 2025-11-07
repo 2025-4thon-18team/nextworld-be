@@ -15,4 +15,6 @@ public interface PayRepository extends JpaRepository<Pay, Long> {
   Optional<Pay> findByImpUid(String impUid);
 
   List<Pay> findByPayerAndPayStatusOrderByCreatedAtDesc(User payer, PayStatus status);
+
+  List<Pay> findByPayStatus(PayStatus status);
 }

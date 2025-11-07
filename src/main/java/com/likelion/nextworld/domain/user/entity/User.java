@@ -43,4 +43,23 @@ public class User {
 
   @Column(name = "updated_at")
   private LocalDateTime updatedAt; // 수정일
+
+  // 포인트 적립
+  public void increasePoints(Long amount) {
+    if (amount == null || amount <= 0) {
+      throw new IllegalArgumentException("적립할 포인트는 0보다 커야 합니다.");
+    }
+    this.pointsBalance += amount;
+  }
+
+  // 포인트 차감
+  public void decreasePoints(Long amount) {
+    if (amount == null || amount <= 0) {
+      throw new IllegalArgumentException("차감할 포인트는 0보다 커야 합니다.");
+    }
+    if (this.pointsBalance < amount) {
+      throw new IllegalArgumentException("보유 포인트가 부족합니다.");
+    }
+    this.pointsBalance -= amount;
+  }
 }

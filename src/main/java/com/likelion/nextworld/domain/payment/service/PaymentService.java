@@ -5,10 +5,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.likelion.nextworld.domain.payment.dto.ChargeRequest;
-import com.likelion.nextworld.domain.payment.dto.PayItemResponse;
-import com.likelion.nextworld.domain.payment.dto.UseRequest;
-import com.likelion.nextworld.domain.payment.dto.VerifyRequest;
+import com.likelion.nextworld.domain.payment.dto.*;
 import com.likelion.nextworld.domain.payment.entity.Pay;
 import com.likelion.nextworld.domain.payment.entity.PayStatus;
 import com.likelion.nextworld.domain.payment.entity.TransactionType;
@@ -37,7 +34,6 @@ public class PaymentService {
               throw new IllegalStateException("이미 처리된 결제입니다.");
             });
 
-    // 1) PENDING 기록
     Pay pay =
         Pay.builder()
             .payer(payer)
@@ -58,7 +54,6 @@ public class PaymentService {
             .findByImpUid(req.getImpUid())
             .orElseThrow(() -> new IllegalArgumentException("해당 impUid로 생성된 결제가 없습니다."));
 
-    // 2) PortOne 서버 검증
     PortOneClient.PaymentLookup lookup = portOneClient.lookup(req.getImpUid());
     if (!"paid".equalsIgnoreCase(lookup.getResponse().getStatus()))
       throw new IllegalStateException("결제가 승인되지 않았습니다.");
@@ -66,7 +61,6 @@ public class PaymentService {
     Long paidAmount = lookup.getResponse().getAmount();
     if (!paidAmount.equals(pay.getAmount())) throw new IllegalStateException("금액 불일치");
 
-    // 3) 사용자 포인트 적립 + 상태 갱신
     payer.setPointsBalance(payer.getPointsBalance() + paidAmount);
     pay.setPayStatus(PayStatus.COMPLETED);
 
@@ -79,7 +73,6 @@ public class PaymentService {
     if (payer.getPointsBalance() < req.getAmount()) throw new IllegalStateException("포인트가 부족합니다.");
 
     payer.setPointsBalance(payer.getPointsBalance() - req.getAmount());
-
     User author = (req.getAuthorId() != null) ? getUser(req.getAuthorId()) : null;
 
     Pay pay =
@@ -90,6 +83,21 @@ public class PaymentService {
             .transactionType(TransactionType.USE)
             .payStatus(PayStatus.COMPLETED)
             .build();
+
+    payRepository.save(pay);
+  }
+
+  @Transactional
+  public void requestRefund(RefundRequest request, Long userId) {
+    Pay pay =
+        payRepository
+            .findByImpUid(request.getImpUid())
+            .orElseThrow(() -> new IllegalArgumentException("결제 내역을 찾을 수 없습니다."));
+
+    if (pay.getPayStatus() != PayStatus.COMPLETED)
+      throw new IllegalStateException("환불 요청은 결제 완료 상태에서만 가능합니다.");
+
+    pay.setStatus(PayStatus.REFUND_REQUESTED);
     payRepository.save(pay);
   }
 
