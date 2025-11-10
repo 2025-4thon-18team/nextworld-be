@@ -1,16 +1,12 @@
 package com.likelion.nextworld.domain.payment.controller;
 
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import com.likelion.nextworld.domain.payment.dto.ChargeRequest;
-import com.likelion.nextworld.domain.payment.dto.RefundRequest;
-import com.likelion.nextworld.domain.payment.dto.UseRequest;
-import com.likelion.nextworld.domain.payment.dto.VerifyRequest;
+import com.likelion.nextworld.domain.payment.dto.*;
 import com.likelion.nextworld.domain.payment.service.PaymentService;
 import com.likelion.nextworld.domain.user.security.UserPrincipal;
 
@@ -49,5 +45,26 @@ public class PaymentController {
       @AuthenticationPrincipal UserPrincipal user, @RequestBody RefundRequest request) {
     paymentService.requestRefund(request, user.getId());
     return ResponseEntity.ok("환불 요청이 접수되었습니다. 관리자의 승인을 기다려주세요.");
+  }
+
+  @GetMapping("/options")
+  public ResponseEntity<ChargeOptionsResponse> getChargeOptions(
+      @AuthenticationPrincipal UserPrincipal user) {
+    ChargeOptionsResponse response = paymentService.getChargeOptions(user);
+    return ResponseEntity.ok(response);
+  }
+
+  @GetMapping("/history/charge")
+  public ResponseEntity<List<PaymentHistoryResponse>> getChargeHistory(
+      @AuthenticationPrincipal UserPrincipal user) {
+    List<PaymentHistoryResponse> response = paymentService.getChargeHistory(user);
+    return ResponseEntity.ok(response);
+  }
+
+  @GetMapping("/history/use")
+  public ResponseEntity<List<PaymentHistoryResponse>> getUseHistory(
+      @AuthenticationPrincipal UserPrincipal user) {
+    List<PaymentHistoryResponse> response = paymentService.getUseHistory(user);
+    return ResponseEntity.ok(response);
   }
 }

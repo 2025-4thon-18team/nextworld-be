@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.*;
 
-import com.likelion.nextworld.domain.payment.entity.Pay;
 import com.likelion.nextworld.domain.user.entity.User;
 
 import lombok.*;
@@ -15,36 +14,32 @@ import lombok.*;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-public class RevenueShare {
+public class RevenueSettlementHistory {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Long revenueId;
-
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "pay_id", nullable = false)
-  private Pay pay;
+  private Long id;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "author_id", nullable = false)
   private User author;
 
   @Column(nullable = false)
-  private Long shareAmount;
+  private Long settledAmount;
 
-  private LocalDateTime distributedAt;
+  @Column(nullable = false)
+  private Long previousBalance;
+
+  @Column(nullable = false)
+  private Long newBalance;
+
+  @Column(nullable = false)
+  private LocalDateTime settledAt;
 
   @PrePersist
   void prePersist() {
-    if (distributedAt == null) {
-      distributedAt = LocalDateTime.now();
+    if (settledAt == null) {
+      settledAt = LocalDateTime.now();
     }
-  }
-
-  @Column(nullable = false)
-  private boolean settled = false;
-
-  public void markAsSettled() {
-    this.settled = true;
   }
 }
