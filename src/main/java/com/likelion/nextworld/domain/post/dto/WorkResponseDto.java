@@ -13,7 +13,7 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class WorkResponse {
+public class WorkResponseDto {
   private Long id;
   private String title;
   private String description;
@@ -32,8 +32,8 @@ public class WorkResponse {
 
   private String authorName;
 
-  // ✅ Work 엔티티 → WorkResponse 변환 생성자
-  public WorkResponse(Work work) {
+  // Work 엔티티 → WorkResponse 변환 생성자
+  public WorkResponseDto(Work work) {
     this.id = work.getId();
     this.title = work.getTitle();
     this.description = work.getDescription();

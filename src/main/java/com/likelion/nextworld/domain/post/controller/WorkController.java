@@ -3,8 +3,8 @@ package com.likelion.nextworld.domain.post.controller;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import com.likelion.nextworld.domain.post.dto.WorkRequest;
-import com.likelion.nextworld.domain.post.dto.WorkResponse;
+import com.likelion.nextworld.domain.post.dto.WorkRequestDto;
+import com.likelion.nextworld.domain.post.dto.WorkResponseDto;
 import com.likelion.nextworld.domain.post.service.WorkService;
 
 import lombok.RequiredArgsConstructor;
@@ -17,8 +17,8 @@ public class WorkController {
   private final WorkService workService;
 
   @PostMapping
-  public ResponseEntity<WorkResponse> createWork(
-      @RequestHeader("Authorization") String token, @RequestBody WorkRequest request) {
+  public ResponseEntity<WorkResponseDto> createWork(
+      @RequestHeader("Authorization") String token, @RequestBody WorkRequestDto request) {
 
     return ResponseEntity.ok(workService.createWork(request, token));
   }

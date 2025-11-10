@@ -7,8 +7,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.likelion.nextworld.domain.post.dto.PostResponseDto;
-import com.likelion.nextworld.domain.post.dto.WorkRequest;
-import com.likelion.nextworld.domain.post.dto.WorkResponse;
+import com.likelion.nextworld.domain.post.dto.WorkRequestDto;
+import com.likelion.nextworld.domain.post.dto.WorkResponseDto;
 import com.likelion.nextworld.domain.post.entity.Work;
 import com.likelion.nextworld.domain.post.repository.WorkRepository;
 import com.likelion.nextworld.domain.user.entity.User;
@@ -39,7 +39,7 @@ public class WorkService {
   }
 
   // ✅ 1차 창작물 생성
-  public WorkResponse createWork(WorkRequest req, String token) {
+  public WorkResponseDto createWork(WorkRequestDto req, String token) {
     if (token.startsWith("Bearer ")) {
       token = token.substring(7);
     }
@@ -68,7 +68,7 @@ public class WorkService {
     work.setAuthor(author);
 
     workRepository.save(work);
-    return new WorkResponse(work);
+    return new WorkResponseDto(work);
   }
 
   // ✅ 특정 1차 창작물의 2차 작품 목록 조회
