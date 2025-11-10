@@ -24,7 +24,23 @@ public class SecurityConfig {
     http.cors(cors -> cors.configurationSource(corsConfigurationSource))
         .csrf(csrf -> csrf.disable())
         .authorizeHttpRequests(
-            auth -> auth.requestMatchers("/api/auth/**").permitAll().anyRequest().authenticated())
+            auth ->
+                auth
+                    // ✅ Swagger 허용
+                    .requestMatchers(
+                        "/v3/api-docs/**",
+                        "/swagger-ui/**",
+                        "/swagger-ui.html",
+                        "/swagger-resources/**",
+                        "/webjars/**")
+                    .permitAll()
+                    // ✅ 로그인 관련 API도 허용
+                    .requestMatchers("/api/auth/**")
+                    .permitAll()
+                    // ✅ 나머지는 JWT 인증 필요
+                    .anyRequest()
+                    .authenticated())
+        // ✅ JWT 필터를 UsernamePasswordAuthenticationFilter 앞에 추가
         .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
         .formLogin(form -> form.disable())
         .httpBasic(basic -> basic.disable());
