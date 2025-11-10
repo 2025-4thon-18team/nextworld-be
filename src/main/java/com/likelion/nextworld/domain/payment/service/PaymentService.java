@@ -120,4 +120,68 @@ public class PaymentService {
   private User getUser(Long id) {
     return userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("사용자 없음"));
   }
+
+  public ChargeOptionsResponse getChargeOptions(UserPrincipal user) {
+    Long currentPoints =
+        userRepository
+            .findById(user.getId())
+            .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."))
+            .getPointsBalance();
+
+    List<ChargeOptionsResponse.ChargeOption> options =
+        List.of(
+            new ChargeOptionsResponse.ChargeOption(1000L, 1000L, currentPoints + 1000L),
+            new ChargeOptionsResponse.ChargeOption(3000L, 3000L, currentPoints + 3000L),
+            new ChargeOptionsResponse.ChargeOption(5000L, 5000L, currentPoints + 5000L),
+            new ChargeOptionsResponse.ChargeOption(10000L, 10000L, currentPoints + 10000L));
+
+    List<String> paymentMethods = List.of("네이버페이", "카카오페이", "카드결제", "계좌이체");
+
+    return new ChargeOptionsResponse(currentPoints, options, paymentMethods);
+  }
+
+  @Transactional(readOnly = true)
+  public List<PaymentHistoryResponse> getChargeHistory(UserPrincipal principal) {
+    User user =
+        userRepository
+            .findById(principal.getId())
+            .orElseThrow(() -> new IllegalArgumentException("사용자 없음"));
+
+    List<Pay> payments =
+        payRepository.findByPayerAndTransactionTypeOrderByCreatedAtDesc(
+            user, TransactionType.CHARGE);
+
+    return payments.stream()
+        .map(
+            p ->
+                PaymentHistoryResponse.builder()
+                    .title("포인트 충전")
+                    .opponentName(null)
+                    .amount(p.getAmount())
+                    .date(p.getCreatedAt())
+                    .build())
+        .toList();
+  }
+
+  @Transactional(readOnly = true)
+  public List<PaymentHistoryResponse> getUseHistory(UserPrincipal principal) {
+    User user =
+        userRepository
+            .findById(principal.getId())
+            .orElseThrow(() -> new IllegalArgumentException("사용자 없음"));
+
+    List<Pay> payments =
+        payRepository.findByPayerAndTransactionTypeOrderByCreatedAtDesc(user, TransactionType.USE);
+
+    return payments.stream()
+        .map(
+            p ->
+                PaymentHistoryResponse.builder()
+                    .title(p.getPost() != null ? p.getPost().getTitle() : "알 수 없는 포스트")
+                    .opponentName(p.getAuthor() != null ? p.getAuthor().getNickname() : null)
+                    .amount(-p.getAmount())
+                    .date(p.getCreatedAt())
+                    .build())
+        .toList();
+  }
 }

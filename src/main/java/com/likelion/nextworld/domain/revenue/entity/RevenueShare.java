@@ -40,4 +40,11 @@ public class RevenueShare {
       distributedAt = LocalDateTime.now();
     }
   }
+
+  @Column(nullable = false)
+  private boolean settled = false;
+
+  public void markAsSettled() {
+    this.settled = true;
+  }
 }

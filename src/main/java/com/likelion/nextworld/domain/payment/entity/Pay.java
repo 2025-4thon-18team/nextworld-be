@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.*;
 
+import com.likelion.nextworld.domain.post.entity.Post;
 import com.likelion.nextworld.domain.user.entity.User;
 
 import lombok.*;
@@ -51,4 +52,8 @@ public class Pay {
   public void setStatus(PayStatus status) {
     this.payStatus = status;
   }
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "post_id")
+  private Post post;
 }

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.likelion.nextworld.domain.payment.entity.Pay;
 import com.likelion.nextworld.domain.payment.entity.PayStatus;
+import com.likelion.nextworld.domain.payment.entity.TransactionType;
 import com.likelion.nextworld.domain.user.entity.User;
 
 public interface PayRepository extends JpaRepository<Pay, Long> {
@@ -14,7 +15,7 @@ public interface PayRepository extends JpaRepository<Pay, Long> {
 
   Optional<Pay> findByImpUid(String impUid);
 
-  List<Pay> findByPayerAndPayStatusOrderByCreatedAtDesc(User payer, PayStatus status);
+  List<Pay> findByPayerAndTransactionTypeOrderByCreatedAtDesc(User payer, TransactionType type);
 
   List<Pay> findByPayStatus(PayStatus status);
 }
