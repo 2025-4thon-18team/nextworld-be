@@ -51,6 +51,7 @@ public class Work {
 
   // 4. 수익 관련
   private Boolean isPaid;
+  private Long price; // 금액
   private Boolean allowDerivativeProfit;
 
   @ManyToOne(fetch = FetchType.LAZY)
