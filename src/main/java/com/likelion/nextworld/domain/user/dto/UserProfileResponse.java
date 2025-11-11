@@ -11,7 +11,6 @@ public class UserProfileResponse {
   private String nickname;
   private Long pointsBalance;
   private Long totalEarned;
-  private String guideline;
 
   public UserProfileResponse(User user) {
     this.userId = user.getUserId();
@@ -19,6 +18,5 @@ public class UserProfileResponse {
     this.nickname = user.getNickname();
     this.pointsBalance = user.getPointsBalance();
     this.totalEarned = user.getTotalEarned();
-    this.guideline = user.getGuideline();
   }
 }

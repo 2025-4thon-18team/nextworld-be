@@ -35,9 +35,6 @@ public class User {
   @Column(name = "total_earned", nullable = false)
   private Long totalEarned; // 누적 수익
 
-  @Column(columnDefinition = "TEXT")
-  private String guideline; // 가이드라인
-
   @Column(name = "created_at", nullable = false)
   private LocalDateTime createdAt; // 가입일
 

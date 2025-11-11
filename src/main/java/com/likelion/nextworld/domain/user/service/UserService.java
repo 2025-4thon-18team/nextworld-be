@@ -113,9 +113,6 @@ public class UserService {
     if (request.getNickname() != null && !request.getNickname().isBlank()) {
       user.setNickname(request.getNickname());
     }
-    if (request.getGuideline() != null) {
-      user.setGuideline(request.getGuideline());
-    }
 
     user.setUpdatedAt(LocalDateTime.now());
     userRepository.save(user);

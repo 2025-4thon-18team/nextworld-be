@@ -7,5 +7,4 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class UserProfileUpdateRequest {
   private String nickname;
-  private String guideline;
 }
