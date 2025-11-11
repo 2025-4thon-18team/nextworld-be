@@ -28,6 +28,7 @@ public class WorkResponseDto {
   private List<String> bannedWords;
 
   private Boolean isPaid;
+  private Long price; // 금액
   private Boolean allowDerivativeProfit;
 
   private String authorName;
