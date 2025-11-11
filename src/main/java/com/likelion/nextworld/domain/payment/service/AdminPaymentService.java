@@ -29,7 +29,7 @@ public class AdminPaymentService {
             .findById(payId)
             .orElseThrow(() -> new IllegalArgumentException("결제 내역을 찾을 수 없습니다."));
 
-    if (pay.getPayStatus() != PayStatus.REFUND_REQUESTED) {
+    if (pay.getStatus() != PayStatus.REFUND_REQUESTED) {
       throw new IllegalStateException("환불 요청 상태가 아닙니다.");
     }
 
@@ -41,20 +41,20 @@ public class AdminPaymentService {
     payRepository.save(pay);
 
     // 사용자 포인트 차감
-    User user = pay.getPayer();
-    user.decreasePoints(pay.getAmount());
+    User payer = pay.getPayer();
+    payer.decreasePoints(pay.getAmount());
   }
 
   @Transactional(readOnly = true)
   public List<PayItemResponse> getRefundRequests() {
-    return payRepository.findByPayStatus(PayStatus.REFUND_REQUESTED).stream()
+    return payRepository.findByStatus(PayStatus.REFUND_REQUESTED).stream()
         .map(
             p ->
                 PayItemResponse.builder()
                     .payId(p.getPayId())
                     .amount(p.getAmount())
-                    .type(p.getTransactionType())
-                    .status(p.getPayStatus())
+                    .type(p.getType())
+                    .status(p.getStatus())
                     .impUid(p.getImpUid())
                     .createdAt(p.getCreatedAt())
                     .build())

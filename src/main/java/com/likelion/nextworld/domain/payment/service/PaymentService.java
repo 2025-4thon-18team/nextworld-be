@@ -10,8 +10,6 @@ import com.likelion.nextworld.domain.payment.entity.Pay;
 import com.likelion.nextworld.domain.payment.entity.PayStatus;
 import com.likelion.nextworld.domain.payment.entity.TransactionType;
 import com.likelion.nextworld.domain.payment.repository.PayRepository;
-import com.likelion.nextworld.domain.post.entity.Post;
-import com.likelion.nextworld.domain.post.repository.PostRepository;
 import com.likelion.nextworld.domain.user.entity.User;
 import com.likelion.nextworld.domain.user.repository.UserRepository;
 import com.likelion.nextworld.domain.user.security.UserPrincipal;
@@ -23,7 +21,6 @@ import lombok.RequiredArgsConstructor;
 public class PaymentService {
   private final PayRepository payRepository;
   private final UserRepository userRepository;
-  private final PostRepository postRepository;
   private final PortOneClient portOneClient;
 
   @Transactional
@@ -41,8 +38,8 @@ public class PaymentService {
         Pay.builder()
             .payer(payer)
             .amount(req.getAmount())
-            .transactionType(TransactionType.CHARGE)
-            .payStatus(PayStatus.PENDING)
+            .type(TransactionType.CHARGE)
+            .status(PayStatus.PENDING)
             .impUid(req.getImpUid())
             .build();
     payRepository.save(pay);
@@ -65,7 +62,7 @@ public class PaymentService {
     if (!paidAmount.equals(pay.getAmount())) throw new IllegalStateException("금액 불일치");
 
     payer.setPointsBalance(payer.getPointsBalance() + paidAmount);
-    pay.setPayStatus(PayStatus.COMPLETED);
+    pay.setStatus(PayStatus.COMPLETED);
 
     return true;
   }
@@ -76,22 +73,13 @@ public class PaymentService {
     if (payer.getPointsBalance() < req.getAmount()) throw new IllegalStateException("포인트가 부족합니다.");
 
     payer.setPointsBalance(payer.getPointsBalance() - req.getAmount());
-    User author = (req.getAuthorId() != null) ? getUser(req.getAuthorId()) : null;
-    
-    Post post = null;
-    if (req.getPostId() != null) {
-      post = postRepository.findById(req.getPostId())
-          .orElseThrow(() -> new IllegalArgumentException("포스트를 찾을 수 없습니다."));
-    }
 
     Pay pay =
         Pay.builder()
             .payer(payer)
-            .author(author)
-            .post(post)
             .amount(req.getAmount())
-            .transactionType(TransactionType.USE)
-            .payStatus(PayStatus.COMPLETED)
+            .type(TransactionType.USE)
+            .status(PayStatus.COMPLETED)
             .build();
 
     payRepository.save(pay);
@@ -104,7 +92,7 @@ public class PaymentService {
             .findByImpUid(request.getImpUid())
             .orElseThrow(() -> new IllegalArgumentException("결제 내역을 찾을 수 없습니다."));
 
-    if (pay.getPayStatus() != PayStatus.COMPLETED)
+    if (pay.getStatus() != PayStatus.COMPLETED)
       throw new IllegalStateException("환불 요청은 결제 완료 상태에서만 가능합니다.");
 
     pay.setStatus(PayStatus.REFUND_REQUESTED);
@@ -119,8 +107,8 @@ public class PaymentService {
                 PayItemResponse.builder()
                     .payId(p.getPayId())
                     .amount(p.getAmount())
-                    .type(p.getTransactionType())
-                    .status(p.getPayStatus())
+                    .type(p.getType())
+                    .status(p.getStatus())
                     .impUid(p.getImpUid())
                     .createdAt(p.getCreatedAt())
                     .build())
@@ -158,8 +146,7 @@ public class PaymentService {
             .orElseThrow(() -> new IllegalArgumentException("사용자 없음"));
 
     List<Pay> payments =
-        payRepository.findByPayerAndTransactionTypeOrderByCreatedAtDesc(
-            user, TransactionType.CHARGE);
+        payRepository.findByPayerAndTypeOrderByCreatedAtDesc(user, TransactionType.CHARGE);
 
     return payments.stream()
         .map(
@@ -181,14 +168,14 @@ public class PaymentService {
             .orElseThrow(() -> new IllegalArgumentException("사용자 없음"));
 
     List<Pay> payments =
-        payRepository.findByPayerAndTransactionTypeOrderByCreatedAtDesc(user, TransactionType.USE);
+        payRepository.findByPayerAndTypeOrderByCreatedAtDesc(user, TransactionType.USE);
 
     return payments.stream()
         .map(
             p ->
                 PaymentHistoryResponse.builder()
-                    .title(p.getPost() != null ? p.getPost().getTitle() : "알 수 없는 포스트")
-                    .opponentName(p.getAuthor() != null ? p.getAuthor().getNickname() : null)
+                    .title("포인트 사용")
+                    .opponentName(null)
                     .amount(-p.getAmount())
                     .date(p.getCreatedAt())
                     .build())
