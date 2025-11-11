@@ -9,10 +9,16 @@ import org.springframework.transaction.annotation.Transactional;
 import com.likelion.nextworld.domain.post.dto.PostRequestDto;
 import com.likelion.nextworld.domain.post.dto.PostResponseDto;
 import com.likelion.nextworld.domain.post.entity.Post;
+import com.likelion.nextworld.domain.post.entity.PostStatistics;
+import com.likelion.nextworld.domain.post.entity.PostTag;
 import com.likelion.nextworld.domain.post.entity.PostType;
+import com.likelion.nextworld.domain.post.entity.Tag;
 import com.likelion.nextworld.domain.post.entity.Work;
 import com.likelion.nextworld.domain.post.entity.WorkStatus;
 import com.likelion.nextworld.domain.post.repository.PostRepository;
+import com.likelion.nextworld.domain.post.repository.PostStatisticsRepository;
+import com.likelion.nextworld.domain.post.repository.PostTagRepository;
+import com.likelion.nextworld.domain.post.repository.TagRepository;
 import com.likelion.nextworld.domain.post.repository.WorkRepository;
 import com.likelion.nextworld.domain.user.entity.User;
 import com.likelion.nextworld.domain.user.repository.UserRepository;
@@ -28,6 +34,9 @@ public class PostService {
   private final WorkRepository workRepository;
   private final UserRepository userRepository;
   private final JwtTokenProvider jwtTokenProvider;
+  private final PostStatisticsRepository postStatisticsRepository;
+  private final PostTagRepository postTagRepository;
+  private final TagRepository tagRepository;
 
   // JWT 토큰에서 사용자 정보 추출
   private User getUserFromToken(String token) {
@@ -61,6 +70,13 @@ public class PostService {
       if (request.getPostType() == null) {
         request.setPostType(PostType.EPISODE);
       }
+
+      // EPISODE인 경우 해당 작품의 작가만 작성 가능
+      if (request.getPostType() == PostType.EPISODE) {
+        if (!work.getAuthor().getUserId().equals(currentUser.getUserId())) {
+          throw new IllegalStateException("작품의 작가만 회차를 작성할 수 있습니다.");
+        }
+      }
     }
 
     // parentWorkId가 있으면 원작 참조
@@ -89,16 +105,43 @@ public class PostService {
             .author(currentUser)
             .isPaid(request.getIsPaid() != null ? request.getIsPaid() : false)
             .price(request.getPrice())
-            .tags(request.getTags())
             .status(request.getStatus() != null ? request.getStatus() : WorkStatus.DRAFT)
             .build();
 
     Post saved = postRepository.save(post);
 
-    // 작품 통계 업데이트 (나중에 구현)
-    // updateWorkStatistics(work);
+    // PostStatistics 생성
+    PostStatistics statistics =
+        PostStatistics.builder()
+            .postId(saved.getId())
+            .post(saved)
+            .viewsCount(0L)
+            .commentsCount(0L)
+            .build();
+    postStatisticsRepository.save(statistics);
 
-    return new PostResponseDto(saved);
+    // PostTag 생성
+    if (request.getTags() != null && !request.getTags().isEmpty()) {
+      for (String tagName : request.getTags()) {
+        if (tagName == null || tagName.trim().isEmpty()) {
+          continue;
+        }
+        Tag tag =
+            tagRepository
+                .findByName(tagName.trim())
+                .orElseGet(
+                    () -> {
+                      Tag newTag = new Tag();
+                      newTag.setName(tagName.trim());
+                      return tagRepository.save(newTag);
+                    });
+
+        PostTag postTag = PostTag.builder().post(saved).tag(tag).build();
+        postTagRepository.save(postTag);
+      }
+    }
+
+    return toPostResponseDto(saved);
   }
 
   // 임시저장
@@ -115,16 +158,26 @@ public class PostService {
             .status(WorkStatus.DRAFT)
             .postType(request.getPostType() != null ? request.getPostType() : PostType.POST)
             .creationType(request.getCreationType())
-            .tags(request.getTags())
             .build();
 
     Post saved = postRepository.save(draft);
-    return new PostResponseDto(saved);
+
+    // PostStatistics 생성
+    PostStatistics statistics =
+        PostStatistics.builder()
+            .postId(saved.getId())
+            .post(saved)
+            .viewsCount(0L)
+            .commentsCount(0L)
+            .build();
+    postStatisticsRepository.save(statistics);
+
+    return toPostResponseDto(saved);
   }
 
   // DTO 변환
   private PostResponseDto toDto(Post post) {
-    return new PostResponseDto(post);
+    return toPostResponseDto(post);
   }
 
   // 임시저장 목록 조회
@@ -132,7 +185,7 @@ public class PostService {
   public List<PostResponseDto> getAllDrafts(String token) {
     User currentUser = getUserFromToken(token);
     return postRepository.findByAuthorAndStatus(currentUser, WorkStatus.DRAFT).stream()
-        .map(PostResponseDto::new)
+        .map(this::toPostResponseDto)
         .collect(Collectors.toList());
   }
 
@@ -144,7 +197,7 @@ public class PostService {
         postRepository
             .findByIdAndAuthorAndStatus(id, currentUser, WorkStatus.DRAFT)
             .orElseThrow(() -> new RuntimeException("본인의 임시저장 글이 아니거나 존재하지 않습니다."));
-    return new PostResponseDto(draft);
+    return toPostResponseDto(draft);
   }
 
   // 포스트 수정
@@ -160,6 +213,13 @@ public class PostService {
       throw new RuntimeException("작성자만 수정할 수 있습니다.");
     }
 
+    // 기존 Post가 EPISODE인 경우, 작가 검증
+    if (post.getPostType() == PostType.EPISODE && post.getWork() != null) {
+      if (!post.getWork().getAuthor().getUserId().equals(currentUser.getUserId())) {
+        throw new IllegalStateException("작품의 작가만 회차를 수정할 수 있습니다.");
+      }
+    }
+
     post.setTitle(request.getTitle());
     post.setContent(request.getContent());
     if (request.getHasImage() != null) {
@@ -172,6 +232,16 @@ public class PostService {
           workRepository
               .findById(request.getWorkId())
               .orElseThrow(() -> new RuntimeException("소속 작품을 찾을 수 없습니다."));
+
+      // EPISODE인 경우 해당 작품의 작가만 작성 가능
+      PostType postTypeToCheck =
+          request.getPostType() != null ? request.getPostType() : post.getPostType();
+      if (postTypeToCheck == PostType.EPISODE) {
+        if (!work.getAuthor().getUserId().equals(currentUser.getUserId())) {
+          throw new IllegalStateException("작품의 작가만 회차를 작성할 수 있습니다.");
+        }
+      }
+
       post.setWork(work);
       // 작품 회차인 경우 postType은 EPISODE여야 함
       if (request.getPostType() == null) {
@@ -194,6 +264,12 @@ public class PostService {
     }
 
     if (request.getPostType() != null) {
+      // POST에서 EPISODE로 변경하는 경우 검증
+      if (request.getPostType() == PostType.EPISODE && post.getWork() != null) {
+        if (!post.getWork().getAuthor().getUserId().equals(currentUser.getUserId())) {
+          throw new IllegalStateException("작품의 작가만 회차로 변경할 수 있습니다.");
+        }
+      }
       post.setPostType(request.getPostType());
     }
 
@@ -213,16 +289,37 @@ public class PostService {
       post.setPrice(request.getPrice());
     }
 
-    if (request.getTags() != null) {
-      post.setTags(request.getTags());
-    }
-
     if (request.getCreationType() != null) {
       post.setCreationType(request.getCreationType());
     }
 
+    // PostTag 업데이트
+    if (request.getTags() != null) {
+      // 기존 태그 삭제
+      postTagRepository.deleteByPost(post);
+
+      // 새 태그 추가
+      for (String tagName : request.getTags()) {
+        if (tagName == null || tagName.trim().isEmpty()) {
+          continue;
+        }
+        Tag tag =
+            tagRepository
+                .findByName(tagName.trim())
+                .orElseGet(
+                    () -> {
+                      Tag newTag = new Tag();
+                      newTag.setName(tagName.trim());
+                      return tagRepository.save(newTag);
+                    });
+
+        PostTag postTag = PostTag.builder().post(post).tag(tag).build();
+        postTagRepository.save(postTag);
+      }
+    }
+
     Post updated = postRepository.save(post);
-    return new PostResponseDto(updated);
+    return toPostResponseDto(updated);
   }
 
   // 포스트 삭제
@@ -248,7 +345,7 @@ public class PostService {
         postRepository
             .findById(id)
             .orElseThrow(() -> new RuntimeException("해당 포스트를 찾을 수 없습니다. ID: " + id));
-    return new PostResponseDto(post);
+    return toPostResponseDto(post);
   }
 
   // 작품의 포스트 목록 조회
@@ -259,7 +356,7 @@ public class PostService {
             .findById(workId)
             .orElseThrow(() -> new RuntimeException("해당 작품을 찾을 수 없습니다."));
     return postRepository.findByWorkOrderByEpisodeNumberAsc(work).stream()
-        .map(PostResponseDto::new)
+        .map(this::toPostResponseDto)
         .collect(Collectors.toList());
   }
 
@@ -267,7 +364,51 @@ public class PostService {
   @Transactional(readOnly = true)
   public List<PostResponseDto> getIndependentPosts() {
     return postRepository.findByWorkIsNull().stream()
-        .map(PostResponseDto::new)
+        .map(this::toPostResponseDto)
         .collect(Collectors.toList());
+  }
+
+  // Post 엔티티 → PostResponseDto 변환
+  public PostResponseDto toPostResponseDto(Post post) {
+    PostResponseDto dto =
+        PostResponseDto.builder()
+            .id(post.getId())
+            .title(post.getTitle())
+            .content(post.getContent())
+            .hasImage(post.getHasImage())
+            .workId(post.getWork() != null ? post.getWork().getId() : null)
+            .workTitle(post.getWork() != null ? post.getWork().getTitle() : null)
+            .postType(post.getPostType())
+            .episodeNumber(post.getEpisodeNumber())
+            .parentWorkId(post.getParentWork() != null ? post.getParentWork().getId() : null)
+            .parentWorkTitle(post.getParentWork() != null ? post.getParentWork().getTitle() : null)
+            .authorName(post.getAuthor() != null ? post.getAuthor().getNickname() : null)
+            .creationType(post.getCreationType())
+            .isPaid(post.getIsPaid())
+            .price(post.getPrice())
+            .status(post.getStatus())
+            .aiCheck(post.getAiCheck())
+            .createdAt(post.getCreatedAt())
+            .updatedAt(post.getUpdatedAt())
+            .build();
+
+    // PostStatistics 조회
+    postStatisticsRepository
+        .findById(post.getId())
+        .ifPresent(
+            statistics -> {
+              dto.setViewsCount(statistics.getViewsCount());
+              dto.setCommentsCount(statistics.getCommentsCount());
+              dto.setRating(statistics.getRating());
+            });
+
+    // PostTag 조회
+    List<String> tagNames =
+        postTagRepository.findByPost(post).stream()
+            .map(pt -> pt.getTag().getName())
+            .collect(Collectors.toList());
+    dto.setTags(tagNames);
+
+    return dto;
   }
 }
