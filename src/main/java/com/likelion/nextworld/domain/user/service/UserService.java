@@ -23,6 +23,11 @@ public class UserService {
   private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
   public SignupResponse signup(SignupRequest request) {
+    // 비밀번호 일치 확인
+    if (!request.getPassword().equals(request.getPasswordConfirm())) {
+      throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+    }
+
     // 이메일 중복 체크
     if (userRepository.existsByEmail(request.getEmail())) {
       throw new IllegalArgumentException("이미 존재하는 이메일입니다.");
@@ -34,9 +39,10 @@ public class UserService {
     // 유저 생성 및 저장
     User user =
         User.builder()
+            .name(request.getName())
+            .nickname(request.getNickname())
             .email(request.getEmail())
             .password(encodedPassword)
-            .nickname(request.getNickname())
             .pointsBalance(0L)
             .totalEarned(0L)
             .createdAt(LocalDateTime.now())
