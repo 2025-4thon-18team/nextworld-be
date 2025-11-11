@@ -10,6 +10,7 @@ import com.likelion.nextworld.domain.user.entity.User;
 import com.likelion.nextworld.domain.user.repository.UserRepository;
 import com.likelion.nextworld.domain.user.security.JwtTokenProvider;
 import com.likelion.nextworld.domain.user.security.TokenBlacklist;
+import com.likelion.nextworld.global.service.S3Uploader;
 
 import lombok.RequiredArgsConstructor;
 
@@ -21,6 +22,7 @@ public class UserService {
   private final UserRepository userRepository;
   private final JwtTokenProvider jwtTokenProvider;
   private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+  private final S3Uploader s3Uploader;
 
   public SignupResponse signup(SignupRequest request) {
     // 비밀번호 일치 확인

@@ -1,5 +1,6 @@
 package com.likelion.nextworld.domain.mypage.service;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -13,6 +14,7 @@ import com.likelion.nextworld.domain.payment.service.PaymentService;
 import com.likelion.nextworld.domain.user.entity.User;
 import com.likelion.nextworld.domain.user.repository.UserRepository;
 import com.likelion.nextworld.domain.user.security.UserPrincipal;
+import com.likelion.nextworld.global.service.S3Uploader;
 
 import lombok.RequiredArgsConstructor;
 
@@ -21,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 public class MyPageService {
   private final UserRepository userRepository;
   private final PaymentService paymentService;
+  private final S3Uploader s3Uploader;
 
   public PointsResponse myPoints(UserPrincipal principal) {
     User me =
@@ -58,10 +61,12 @@ public class MyPageService {
 
     MultipartFile profileImage = request.getProfileImage();
     if (profileImage != null && !profileImage.isEmpty()) {
-      // S3 업로드 로직으로 교체
-      String imageUrl =
-          "https://nextworld-bucket.s3.amazonaws.com/profile/" + profileImage.getOriginalFilename();
-      user.setProfileImageUrl(imageUrl);
+      try {
+        String imageUrl = s3Uploader.upload(profileImage, "profile");
+        user.setProfileImageUrl(imageUrl);
+      } catch (IOException e) {
+        throw new RuntimeException("프로필 이미지 업로드에 실패했습니다.", e);
+      }
     }
 
     user.setUpdatedAt(LocalDateTime.now());
