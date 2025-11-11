@@ -10,6 +10,7 @@ import com.likelion.nextworld.domain.post.dto.PostResponseDto;
 import com.likelion.nextworld.domain.post.dto.WorkRequestDto;
 import com.likelion.nextworld.domain.post.dto.WorkResponseDto;
 import com.likelion.nextworld.domain.post.entity.Work;
+import com.likelion.nextworld.domain.post.entity.WorkTypeEnum;
 import com.likelion.nextworld.domain.post.repository.WorkRepository;
 import com.likelion.nextworld.domain.user.entity.User;
 import com.likelion.nextworld.domain.user.repository.UserRepository;
@@ -38,7 +39,8 @@ public class WorkService {
         .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
   }
 
-  // ✅ 1차 창작물 생성
+  // ✅ 작품 생성
+  @Transactional
   public WorkResponseDto createWork(WorkRequestDto req, String token) {
     if (token.startsWith("Bearer ")) {
       token = token.substring(7);
@@ -52,26 +54,88 @@ public class WorkService {
     User author =
         userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
 
+    // workType 필수 검증
+    if (req.getWorkType() == null) {
+      throw new IllegalArgumentException("작품 타입(workType)은 필수입니다.");
+    }
+
+    // 2차 창작물인 경우 parentWorkId 필수 검증
+    if (req.getWorkType() == WorkTypeEnum.DERIVATIVE && req.getParentWorkId() == null) {
+      throw new IllegalArgumentException("2차 창작물인 경우 원작 작품 ID(parentWorkId)는 필수입니다.");
+    }
+
+    // 1차 창작물인 경우 parentWorkId는 NULL이어야 함
+    if (req.getWorkType() == WorkTypeEnum.ORIGINAL && req.getParentWorkId() != null) {
+      throw new IllegalArgumentException("1차 창작물인 경우 원작 작품 ID(parentWorkId)는 없어야 합니다.");
+    }
+
+    Work parentWork = null;
+    if (req.getParentWorkId() != null) {
+      parentWork =
+          workRepository
+              .findById(req.getParentWorkId())
+              .orElseThrow(() -> new RuntimeException("원작 작품을 찾을 수 없습니다."));
+    }
+
     Work work = new Work();
+    work.setWorkType(req.getWorkType());
+    work.setParentWork(parentWork);
     work.setTitle(req.getTitle());
     work.setDescription(req.getDescription());
     work.setCoverImageUrl(req.getCoverImageUrl());
-    work.setTags(req.getTags());
+    work.setTags(req.getTags()); // 구분자 문자열 그대로 저장
+    work.setUniverseName(req.getUniverseName());
     work.setUniverseDescription(req.getUniverseDescription());
-    work.setAllowDerivative(req.getAllowDerivative());
+    work.setCategory(req.getCategory());
+    work.setSerializationType(req.getSerializationType());
+    work.setSerializationSchedule(req.getSerializationSchedule());
+    work.setIsSerializing(req.getIsSerializing() != null ? req.getIsSerializing() : false);
+    work.setAllowDerivative(req.getAllowDerivative() != null ? req.getAllowDerivative() : false);
     work.setGuidelineRelation(req.getGuidelineRelation());
     work.setGuidelineContent(req.getGuidelineContent());
     work.setGuidelineBackground(req.getGuidelineBackground());
-    work.setBannedWords(req.getBannedWords());
-    work.setIsPaid(req.getIsPaid());
-    work.setAllowDerivativeProfit(req.getAllowDerivativeProfit());
+    work.setBannedWords(req.getBannedWords()); // 구분자 문자열 그대로 저장
+    work.setAllowDerivativeProfit(
+        req.getAllowDerivativeProfit() != null ? req.getAllowDerivativeProfit() : false);
     work.setAuthor(author);
 
     workRepository.save(work);
     return new WorkResponseDto(work);
   }
 
-  // ✅ 특정 1차 창작물의 2차 작품 목록 조회
+  // ✅ 작품 목록 조회
+  @Transactional(readOnly = true)
+  public List<WorkResponseDto> getAllWorks(WorkTypeEnum workType) {
+    List<Work> works =
+        workType != null ? workRepository.findByWorkType(workType) : workRepository.findAll();
+
+    return works.stream().map(WorkResponseDto::new).collect(Collectors.toList());
+  }
+
+  // ✅ 작품 상세 조회
+  @Transactional(readOnly = true)
+  public WorkResponseDto getWorkById(Long id) {
+    Work work =
+        workRepository
+            .findById(id)
+            .orElseThrow(() -> new RuntimeException("해당 작품을 찾을 수 없습니다. ID: " + id));
+
+    return new WorkResponseDto(work);
+  }
+
+  // ✅ 특정 작품의 회차 목록 조회
+  @Transactional(readOnly = true)
+  public List<PostResponseDto> getWorkEpisodes(Long workId) {
+    Work work =
+        workRepository
+            .findById(workId)
+            .orElseThrow(() -> new RuntimeException("해당 작품을 찾을 수 없습니다."));
+
+    return work.getEpisodes().stream().map(PostResponseDto::new).collect(Collectors.toList());
+  }
+
+  // ✅ 특정 작품의 원작 참조 포스트 목록 조회
+  @Transactional(readOnly = true)
   public List<PostResponseDto> getDerivativePosts(Long workId) {
     Work work =
         workRepository
