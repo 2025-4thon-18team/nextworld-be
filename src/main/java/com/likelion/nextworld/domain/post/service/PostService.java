@@ -46,12 +46,17 @@ public class PostService {
   public PostResponseDto createWork(PostRequestDto request, String token) {
     User currentUser = getUserFromToken(token);
 
-    Work parentWork = null; // Work 타입으로 변경
+    Work parentWork = null;
     if (request.getParentId() != null) {
       parentWork =
           workRepository
               .findById(request.getParentId())
-              .orElseThrow(() -> new RuntimeException("원작(Work)을 찾을 수 없습니다."));
+              .orElseThrow(() -> new RuntimeException("원작을 찾을 수 없습니다."));
+
+      // ✅ 2차 창작 허용 여부 검사 추가
+      if (Boolean.FALSE.equals(parentWork.getAllowDerivative())) {
+        throw new RuntimeException("이 작품은 2차 창작이 허용되지 않았습니다.");
+      }
     }
 
     Post work =
@@ -62,7 +67,7 @@ public class PostService {
             .status(request.getStatus())
             .workType(request.getWorkType())
             .creationType(request.getCreationType())
-            .parentWork(parentWork) // 이제 Work 타입 연결
+            .parentWork(parentWork)
             .build();
 
     Post saved = postRepository.save(work);

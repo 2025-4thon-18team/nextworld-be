@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.likelion.nextworld.domain.payment.entity.Pay;
 import com.likelion.nextworld.domain.payment.repository.PayRepository;
 import com.likelion.nextworld.domain.post.entity.Post;
+import com.likelion.nextworld.domain.post.entity.Work;
 import com.likelion.nextworld.domain.post.repository.PostRepository;
 import com.likelion.nextworld.domain.revenue.dto.RevenueDashboardResponse;
 import com.likelion.nextworld.domain.revenue.dto.RevenueSaleItemResponse;
@@ -34,46 +35,51 @@ public class RevenueService {
 
   /** 수익 분배: 원작자 40%, 2차 창작자 30%, 플랫폼 30% */
   @Transactional
-  public void distribute(Long payId, Long derivativePostId) {
+  public void distribute(Long payId, Long postId) {
 
     Pay pay =
         payRepository.findById(payId).orElseThrow(() -> new IllegalArgumentException("결제 내역 없음"));
-
     Post post =
-        postRepository
-            .findById(derivativePostId)
-            .orElseThrow(() -> new IllegalArgumentException("2차 창작물(Post) 없음"));
+        postRepository.findById(postId).orElseThrow(() -> new IllegalArgumentException("포스트 없음"));
+    Work work = post.getParentWork(); // ✅ 이건 있음 (Post → Work)
 
-    User originalAuthor = post.getParentWork().getAuthor();
-    User derivativeAuthor = post.getAuthor();
-
-    // 플랫폼 관리자 (id=1)
     User platformAdmin =
-        userRepository
-            .findById(1L)
-            .orElseThrow(() -> new IllegalArgumentException("플랫폼 관리자 계정 없음"));
-
+        userRepository.findById(1L).orElseThrow(() -> new IllegalArgumentException("플랫폼 관리자 없음"));
     long amount = pay.getAmount();
-    long authorShare = amount * 40 / 100;
-    long derivativeShare = amount * 30 / 100;
-    long platformShare = amount * 30 / 100;
 
+    // 무료 작품은 분배 없음
+    if (Boolean.FALSE.equals(work.getIsPaid())) return;
+
+    // 1차 창작물(Post가 아닌, 원작 Work만 존재) → 5:5
+    // Post는 항상 2차니까, 이 경우는 else로 처리할 수도 있음
+    if (post.getParentWork() == null) {
+      long authorShare = amount * 50 / 100;
+      long platformShare = amount * 50 / 100;
+      saveRevenueShares(pay, work.getAuthor(), authorShare);
+      saveRevenueShares(pay, platformAdmin, platformShare);
+      return;
+    }
+
+    // 2차 창작물 → 4:3:3 (원작자, 2차 작가, 플랫폼)
+    Work original = post.getParentWork();
+    if (Boolean.TRUE.equals(original.getAllowDerivative())
+        && Boolean.TRUE.equals(original.getAllowDerivativeProfit())) {
+
+      long originalShare = amount * 40 / 100;
+      long derivativeShare = amount * 30 / 100;
+      long platformShare = amount * 30 / 100;
+
+      saveRevenueShares(pay, original.getAuthor(), originalShare);
+      saveRevenueShares(pay, work.getAuthor(), derivativeShare);
+      saveRevenueShares(pay, platformAdmin, platformShare);
+    }
+  }
+
+  /** 내부 공통 메서드 - 분배 저장 및 작가 수익 누적 */
+  private void saveRevenueShares(Pay pay, User author, long shareAmount) {
     revenueShareRepository.save(
-        RevenueShare.builder().pay(pay).author(originalAuthor).shareAmount(authorShare).build());
-
-    revenueShareRepository.save(
-        RevenueShare.builder()
-            .pay(pay)
-            .author(derivativeAuthor)
-            .shareAmount(derivativeShare)
-            .build());
-
-    revenueShareRepository.save(
-        RevenueShare.builder().pay(pay).author(platformAdmin).shareAmount(platformShare).build());
-
-    originalAuthor.setTotalEarned(originalAuthor.getTotalEarned() + authorShare);
-    derivativeAuthor.setTotalEarned(derivativeAuthor.getTotalEarned() + derivativeShare);
-    platformAdmin.setTotalEarned(platformAdmin.getTotalEarned() + platformShare);
+        RevenueShare.builder().pay(pay).author(author).shareAmount(shareAmount).build());
+    author.setTotalEarned(author.getTotalEarned() + shareAmount);
   }
 
   @Transactional(readOnly = true)

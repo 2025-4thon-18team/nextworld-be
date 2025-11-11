@@ -1,10 +1,12 @@
 package com.likelion.nextworld.domain.post.service;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.likelion.nextworld.domain.post.dto.PostResponseDto;
 import com.likelion.nextworld.domain.post.dto.WorkRequestDto;
@@ -14,6 +16,7 @@ import com.likelion.nextworld.domain.post.repository.WorkRepository;
 import com.likelion.nextworld.domain.user.entity.User;
 import com.likelion.nextworld.domain.user.repository.UserRepository;
 import com.likelion.nextworld.domain.user.security.JwtTokenProvider;
+import com.likelion.nextworld.global.service.S3Uploader;
 
 import lombok.RequiredArgsConstructor;
 
@@ -24,6 +27,18 @@ public class WorkService {
   private final WorkRepository workRepository;
   private final UserRepository userRepository;
   private final JwtTokenProvider jwtTokenProvider;
+  private final S3Uploader s3Uploader;
+
+  // 이미지 업로드 전용
+  @Transactional
+  public String uploadImage(String token, MultipartFile file) throws IOException {
+    if (token.startsWith("Bearer ")) token = token.substring(7);
+    if (!jwtTokenProvider.validateToken(token))
+      throw new RuntimeException("Invalid or expired token");
+
+    // S3 업로드
+    return s3Uploader.upload(file, "work");
+  }
 
   private User getUserFromToken(String token) {
     if (token == null || !token.startsWith("Bearer ")) {
@@ -39,14 +54,11 @@ public class WorkService {
   }
 
   // ✅ 1차 창작물 생성
+  @Transactional
   public WorkResponseDto createWork(WorkRequestDto req, String token) {
-    if (token.startsWith("Bearer ")) {
-      token = token.substring(7);
-    }
-
-    if (!jwtTokenProvider.validateToken(token)) {
+    if (token.startsWith("Bearer ")) token = token.substring(7);
+    if (!jwtTokenProvider.validateToken(token))
       throw new RuntimeException("Invalid or expired token");
-    }
 
     Long userId = jwtTokenProvider.getUserIdFromToken(token);
     User author =
@@ -63,11 +75,24 @@ public class WorkService {
     work.setGuidelineContent(req.getGuidelineContent());
     work.setGuidelineBackground(req.getGuidelineBackground());
     work.setBannedWords(req.getBannedWords());
-    work.setIsPaid(req.getIsPaid());
-    work.setAllowDerivativeProfit(req.getAllowDerivativeProfit());
-    work.setAuthor(author);
 
+    // ✅ 유료 여부와 금액
+    work.setIsPaid(req.getIsPaid());
+    if (Boolean.TRUE.equals(req.getIsPaid())) {
+      if (req.getPrice() == null || req.getPrice() <= 0) {
+        throw new RuntimeException("유료 작품은 금액을 반드시 입력해야 합니다.");
+      }
+      work.setPrice(req.getPrice());
+    } else {
+      work.setPrice(0L); // 무료는 0원으로 고정
+    }
+
+    // ✅ 2차 창작물 수익 허용 여부
+    work.setAllowDerivativeProfit(req.getAllowDerivativeProfit());
+
+    work.setAuthor(author);
     workRepository.save(work);
+
     return new WorkResponseDto(work);
   }
 

@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import com.likelion.nextworld.domain.post.dto.PostRequestDto;
 import com.likelion.nextworld.domain.post.dto.PostResponseDto;
 import com.likelion.nextworld.domain.post.service.PostService;
+import com.likelion.nextworld.global.ai.AiCheckService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -16,11 +17,20 @@ import lombok.RequiredArgsConstructor;
 public class PostController {
 
   private final PostService postService;
+  private final AiCheckService aiCheckService;
 
-  // 창작물 게시
+  // 2차 창작물 게시 (AI 검수 포함)
   @PostMapping
   public PostResponseDto createWork(
       @RequestHeader("Authorization") String token, @RequestBody PostRequestDto request) {
+
+    // 1️⃣ AI 가이드라인 검수 수행
+    boolean isSafe = aiCheckService.validatePostById(request.getWorkId(), request.getContent());
+    if (!isSafe) {
+      throw new IllegalArgumentException("가이드라인 또는 금지어 위반으로 업로드 불가합니다.");
+    }
+
+    // 2️⃣ 통과 시 기존 서비스 로직 실행
     return postService.createWork(request, token);
   }
 
