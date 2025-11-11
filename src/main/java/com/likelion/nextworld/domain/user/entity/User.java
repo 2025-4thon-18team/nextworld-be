@@ -37,9 +37,6 @@ public class User {
   @Column(name = "points_balance", nullable = false)
   private Long pointsBalance; // 현재 보유 포인트
 
-  @Column(name = "total_earned", nullable = false)
-  private Long totalEarned; // 누적 수익
-
   @Column(name = "created_at", nullable = false)
   private LocalDateTime createdAt; // 가입일
 

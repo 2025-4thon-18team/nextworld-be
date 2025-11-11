@@ -12,7 +12,6 @@ public class UserProfileResponse {
   private String name;
   private String profileImageUrl;
   private Long pointsBalance;
-  private Long totalEarned;
 
   public UserProfileResponse(User user) {
     this.userId = user.getUserId();
@@ -21,6 +20,5 @@ public class UserProfileResponse {
     this.name = user.getName();
     this.profileImageUrl = user.getProfileImageUrl();
     this.pointsBalance = user.getPointsBalance();
-    this.totalEarned = user.getTotalEarned();
   }
 }

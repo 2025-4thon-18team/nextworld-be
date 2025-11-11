@@ -38,7 +38,6 @@ public class UserService {
             .password(encodedPassword)
             .nickname(request.getNickname())
             .pointsBalance(0L)
-            .totalEarned(0L)
             .createdAt(LocalDateTime.now())
             .build();
 

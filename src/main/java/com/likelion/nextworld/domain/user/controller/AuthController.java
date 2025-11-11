@@ -38,7 +38,8 @@ public class AuthController {
   @SecurityRequirement(name = "Authorization")
   @PostMapping("/logout")
   public ResponseEntity<String> logout(
-      @Parameter(description = "Bearer 토큰", required = true) @RequestHeader("Authorization") String authHeader) {
+      @Parameter(description = "Bearer 토큰", required = true) @RequestHeader("Authorization")
+          String authHeader) {
     String token = authHeader.replace("Bearer ", "");
     userService.logout(token);
     return ResponseEntity.ok("로그아웃 되었습니다.");
@@ -47,7 +48,8 @@ public class AuthController {
   @Operation(summary = "토큰 갱신", description = "Refresh Token을 사용하여 새로운 Access Token을 발급받습니다.")
   @PostMapping("/refresh")
   public ResponseEntity<String> refresh(
-      @Parameter(description = "Refresh Token", required = true) @RequestHeader("Refresh-Token") String refreshToken) {
+      @Parameter(description = "Refresh Token", required = true) @RequestHeader("Refresh-Token")
+          String refreshToken) {
     String newAccessToken = userService.refresh(refreshToken);
     return ResponseEntity.ok(newAccessToken);
   }
@@ -56,7 +58,8 @@ public class AuthController {
   @SecurityRequirement(name = "Authorization")
   @GetMapping("/me")
   public ResponseEntity<UserProfileResponse> getMyProfile(
-      @Parameter(description = "Bearer 토큰", required = true) @RequestHeader("Authorization") String authHeader) {
+      @Parameter(description = "Bearer 토큰", required = true) @RequestHeader("Authorization")
+          String authHeader) {
 
     String token = authHeader.replace("Bearer ", "");
     UserProfileResponse response = userService.getMyProfile(token);
