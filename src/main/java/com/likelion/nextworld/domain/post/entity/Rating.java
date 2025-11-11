@@ -50,4 +50,3 @@ public class Rating {
     this.updatedAt = LocalDateTime.now();
   }
 }
-

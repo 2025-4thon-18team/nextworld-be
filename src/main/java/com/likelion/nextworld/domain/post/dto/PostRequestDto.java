@@ -24,7 +24,8 @@ public class PostRequestDto {
   private Boolean isPaid;
   private Long price;
 
-  private String tags; // 구분자 문자열: "태그1|태그2|태그3"
+  // 태그 (PostTag로 저장)
+  private java.util.List<String> tags; // 태그 이름 리스트
 
   private WorkStatus status;
 }

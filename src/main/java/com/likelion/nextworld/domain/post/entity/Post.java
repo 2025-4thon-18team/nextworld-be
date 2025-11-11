@@ -1,6 +1,5 @@
 package com.likelion.nextworld.domain.post.entity;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import jakarta.persistence.*;
@@ -67,26 +66,6 @@ public class Post {
 
   private Long price;
 
-  // 태그 (구분자로 구분: 태그1|태그2|태그3)
-  @Column(columnDefinition = "TEXT")
-  private String tags;
-
-  // 통계 (캐시)
-  @Column(name = "likes_count", nullable = false)
-  @Builder.Default
-  private Long likesCount = 0L;
-
-  @Column(name = "views_count", nullable = false)
-  @Builder.Default
-  private Long viewsCount = 0L;
-
-  @Column(name = "comments_count", nullable = false)
-  @Builder.Default
-  private Long commentsCount = 0L;
-
-  @Column(precision = 3, scale = 2)
-  private BigDecimal rating;
-
   // 상태
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)
@@ -116,15 +95,6 @@ public class Post {
     }
     if (this.isPaid == null) {
       this.isPaid = false;
-    }
-    if (this.likesCount == null) {
-      this.likesCount = 0L;
-    }
-    if (this.viewsCount == null) {
-      this.viewsCount = 0L;
-    }
-    if (this.commentsCount == null) {
-      this.commentsCount = 0L;
     }
     if (this.hasImage == null) {
       this.hasImage = false;

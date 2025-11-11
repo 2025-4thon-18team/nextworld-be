@@ -26,12 +26,8 @@ public class Scrap {
   private User user;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "work_id")
-  private Work work; // NULL 가능
-
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "post_id")
-  private Post post; // NULL 가능
+  @JoinColumn(name = "post_id", nullable = false)
+  private Post post;
 
   @Column(name = "created_at", nullable = false)
   private LocalDateTime createdAt;
