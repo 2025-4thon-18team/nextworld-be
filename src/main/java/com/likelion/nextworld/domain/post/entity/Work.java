@@ -31,6 +31,11 @@ public class Work {
   @Column(name = "work_type", nullable = false)
   private WorkTypeEnum workType; // ORIGINAL, DERIVATIVE
 
+  // 원작 작품 참조 (2차 창작물인 경우)
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "parent_work_id")
+  private Work parentWork; // 원작 작품 (DERIVATIVE인 경우)
+
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "author_id", nullable = false)
   private User author;

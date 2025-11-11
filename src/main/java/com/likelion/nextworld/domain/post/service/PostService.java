@@ -71,11 +71,16 @@ public class PostService {
               .orElseThrow(() -> new RuntimeException("원작 작품을 찾을 수 없습니다."));
     }
 
+    // workId 또는 parentWorkId 중 하나는 반드시 지정되어야 함
+    if (work == null && parentWork == null) {
+      throw new IllegalArgumentException("workId 또는 parentWorkId 중 하나는 필수입니다.");
+    }
+
     Post post =
         Post.builder()
             .title(request.getTitle())
             .content(request.getContent())
-            .thumbnailUrl(request.getThumbnailUrl())
+            .hasImage(request.getHasImage() != null ? request.getHasImage() : false)
             .work(work)
             .postType(request.getPostType() != null ? request.getPostType() : PostType.POST)
             .episodeNumber(request.getEpisodeNumber())
@@ -105,7 +110,7 @@ public class PostService {
         Post.builder()
             .title(request.getTitle())
             .content(request.getContent())
-            .thumbnailUrl(request.getThumbnailUrl())
+            .hasImage(request.getHasImage() != null ? request.getHasImage() : false)
             .author(currentUser)
             .status(WorkStatus.DRAFT)
             .postType(request.getPostType() != null ? request.getPostType() : PostType.POST)
@@ -157,7 +162,44 @@ public class PostService {
 
     post.setTitle(request.getTitle());
     post.setContent(request.getContent());
-    post.setThumbnailUrl(request.getThumbnailUrl());
+    if (request.getHasImage() != null) {
+      post.setHasImage(request.getHasImage());
+    }
+
+    // workId 업데이트
+    if (request.getWorkId() != null) {
+      Work work =
+          workRepository
+              .findById(request.getWorkId())
+              .orElseThrow(() -> new RuntimeException("소속 작품을 찾을 수 없습니다."));
+      post.setWork(work);
+      // 작품 회차인 경우 postType은 EPISODE여야 함
+      if (request.getPostType() == null) {
+        post.setPostType(PostType.EPISODE);
+      }
+    }
+
+    // parentWorkId 업데이트
+    if (request.getParentWorkId() != null) {
+      Work parentWork =
+          workRepository
+              .findById(request.getParentWorkId())
+              .orElseThrow(() -> new RuntimeException("원작 작품을 찾을 수 없습니다."));
+      post.setParentWork(parentWork);
+    }
+
+    // workId 또는 parentWorkId 중 하나는 반드시 지정되어야 함
+    if (post.getWork() == null && post.getParentWork() == null) {
+      throw new IllegalArgumentException("workId 또는 parentWorkId 중 하나는 필수입니다.");
+    }
+
+    if (request.getPostType() != null) {
+      post.setPostType(request.getPostType());
+    }
+
+    if (request.getEpisodeNumber() != null) {
+      post.setEpisodeNumber(request.getEpisodeNumber());
+    }
 
     if (request.getStatus() != null) {
       post.setStatus(request.getStatus());
@@ -173,6 +215,10 @@ public class PostService {
 
     if (request.getTags() != null) {
       post.setTags(request.getTags());
+    }
+
+    if (request.getCreationType() != null) {
+      post.setCreationType(request.getCreationType());
     }
 
     Post updated = postRepository.save(post);

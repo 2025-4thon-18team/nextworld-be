@@ -11,6 +11,7 @@ import com.likelion.nextworld.domain.post.dto.WorkRequestDto;
 import com.likelion.nextworld.domain.post.dto.WorkResponseDto;
 import com.likelion.nextworld.domain.post.entity.Work;
 import com.likelion.nextworld.domain.post.entity.WorkTypeEnum;
+import com.likelion.nextworld.domain.post.repository.PostRepository;
 import com.likelion.nextworld.domain.post.repository.WorkRepository;
 import com.likelion.nextworld.domain.user.entity.User;
 import com.likelion.nextworld.domain.user.repository.UserRepository;
@@ -23,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 public class WorkService {
 
   private final WorkRepository workRepository;
+  private final PostRepository postRepository;
   private final UserRepository userRepository;
   private final JwtTokenProvider jwtTokenProvider;
 
@@ -84,19 +86,13 @@ public class WorkService {
     work.setDescription(req.getDescription());
     work.setCoverImageUrl(req.getCoverImageUrl());
     work.setTags(req.getTags()); // 구분자 문자열 그대로 저장
-    work.setUniverseName(req.getUniverseName());
-    work.setUniverseDescription(req.getUniverseDescription());
     work.setCategory(req.getCategory());
-    work.setSerializationType(req.getSerializationType());
     work.setSerializationSchedule(req.getSerializationSchedule());
-    work.setIsSerializing(req.getIsSerializing() != null ? req.getIsSerializing() : false);
     work.setAllowDerivative(req.getAllowDerivative() != null ? req.getAllowDerivative() : false);
     work.setGuidelineRelation(req.getGuidelineRelation());
     work.setGuidelineContent(req.getGuidelineContent());
     work.setGuidelineBackground(req.getGuidelineBackground());
     work.setBannedWords(req.getBannedWords()); // 구분자 문자열 그대로 저장
-    work.setAllowDerivativeProfit(
-        req.getAllowDerivativeProfit() != null ? req.getAllowDerivativeProfit() : false);
     work.setAuthor(author);
 
     workRepository.save(work);
@@ -142,7 +138,8 @@ public class WorkService {
             .findById(workId)
             .orElseThrow(() -> new RuntimeException("해당 원작을 찾을 수 없습니다."));
 
-    return work.getDerivativePosts().stream()
+    // parentWork가 현재 작품인 포스트들을 조회
+    return postRepository.findByParentWork(work).stream()
         .map(PostResponseDto::new)
         .collect(Collectors.toList());
   }

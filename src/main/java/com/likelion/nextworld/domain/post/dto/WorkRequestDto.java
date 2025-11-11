@@ -11,6 +11,8 @@ import lombok.Setter;
 public class WorkRequestDto {
   private WorkTypeEnum workType; // 필수: ORIGINAL, DERIVATIVE
 
+  private Long parentWorkId; // 원작 작품 ID (DERIVATIVE인 경우 필수)
+
   private String title;
   private String description;
   private String coverImageUrl;

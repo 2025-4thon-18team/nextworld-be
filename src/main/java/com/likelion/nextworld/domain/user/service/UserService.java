@@ -114,6 +114,14 @@ public class UserService {
       user.setNickname(request.getNickname());
     }
 
+    if (request.getName() != null && !request.getName().isBlank()) {
+      user.setName(request.getName());
+    }
+
+    if (request.getProfileImageUrl() != null) {
+      user.setProfileImageUrl(request.getProfileImageUrl());
+    }
+
     user.setUpdatedAt(LocalDateTime.now());
     userRepository.save(user);
 
