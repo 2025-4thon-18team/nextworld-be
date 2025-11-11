@@ -4,23 +4,30 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.*;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Entity
-@Table(name = "tags")
+@Table(
+    name = "post_tags",
+    uniqueConstraints = {@UniqueConstraint(columnNames = {"post_id", "tag_id"})})
 @Getter
 @Setter
 @NoArgsConstructor
-public class Tag {
+@AllArgsConstructor
+@Builder
+public class PostTag {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @Column(nullable = false, unique = true)
-  private String name; // 태그 이름
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "post_id", nullable = false)
+  private Post post;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "tag_id", nullable = false)
+  private Tag tag;
 
   @Column(name = "created_at", nullable = false)
   private LocalDateTime createdAt;
