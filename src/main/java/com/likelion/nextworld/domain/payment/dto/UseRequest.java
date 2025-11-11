@@ -5,6 +5,7 @@ import lombok.Getter;
 @Getter
 public class UseRequest {
   private Long amount;
+  private Long postId; // 결제할 Post ID
   private Long derivativeWorkId;
   private Long authorId;
 }

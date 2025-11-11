@@ -10,6 +10,8 @@ import com.likelion.nextworld.domain.payment.entity.Pay;
 import com.likelion.nextworld.domain.payment.entity.PayStatus;
 import com.likelion.nextworld.domain.payment.entity.TransactionType;
 import com.likelion.nextworld.domain.payment.repository.PayRepository;
+import com.likelion.nextworld.domain.post.entity.Post;
+import com.likelion.nextworld.domain.post.repository.PostRepository;
 import com.likelion.nextworld.domain.user.entity.User;
 import com.likelion.nextworld.domain.user.repository.UserRepository;
 import com.likelion.nextworld.domain.user.security.UserPrincipal;
@@ -21,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 public class PaymentService {
   private final PayRepository payRepository;
   private final UserRepository userRepository;
+  private final PostRepository postRepository;
   private final PortOneClient portOneClient;
 
   @Transactional
@@ -74,11 +77,18 @@ public class PaymentService {
 
     payer.setPointsBalance(payer.getPointsBalance() - req.getAmount());
     User author = (req.getAuthorId() != null) ? getUser(req.getAuthorId()) : null;
+    
+    Post post = null;
+    if (req.getPostId() != null) {
+      post = postRepository.findById(req.getPostId())
+          .orElseThrow(() -> new IllegalArgumentException("포스트를 찾을 수 없습니다."));
+    }
 
     Pay pay =
         Pay.builder()
             .payer(payer)
             .author(author)
+            .post(post)
             .amount(req.getAmount())
             .transactionType(TransactionType.USE)
             .payStatus(PayStatus.COMPLETED)

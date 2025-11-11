@@ -18,4 +18,8 @@ public interface PayRepository extends JpaRepository<Pay, Long> {
   List<Pay> findByPayerAndTransactionTypeOrderByCreatedAtDesc(User payer, TransactionType type);
 
   List<Pay> findByPayStatus(PayStatus status);
+
+  // 결제한 Post 조회 (USE 타입이고 post가 NULL이 아닌 경우)
+  List<Pay> findByPayerAndTransactionTypeAndPostIsNotNullAndPayStatusOrderByCreatedAtDesc(
+      User payer, TransactionType type, PayStatus status);
 }
