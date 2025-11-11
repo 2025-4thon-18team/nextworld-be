@@ -10,8 +10,7 @@ import lombok.NoArgsConstructor;
 public class DistributeRequest {
   @Schema(description = "결제 ID", example = "1")
   private Long payId;
-  
+
   @Schema(description = "수익 분배할 Post ID", example = "1")
   private Long postId; // 수익 분배할 Post ID
 }
-

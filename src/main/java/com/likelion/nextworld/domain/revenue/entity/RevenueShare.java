@@ -21,7 +21,7 @@ public class RevenueShare {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Long revenueId;
+  private Long id;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "pay_id", nullable = false)
@@ -37,27 +37,30 @@ public class RevenueShare {
   private User originalAuthor; // 원작자 ID (2차 창작인 경우, NULL 가능)
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "derivative_author_id", nullable = false)
-  private User derivativeAuthor; // 창작자 ID (포스트 작성자)
+  @JoinColumn(name = "derivative_author_id")
+  private User derivativeAuthor; // 창작자 ID (2차 창작 작가, NULL 가능)
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "admin_id", nullable = false)
-  private User admin; // 관리자 ID
+  @JoinColumn(name = "platform_user_id")
+  private User platformUser; // 플랫폼 관리자 ID (NULL 가능)
 
   // 분배 정보
-  @Column(name = "share_each", nullable = false)
-  private Long shareEach; // 각자 분배 포인트
+  @Column(name = "original_author_amount")
+  private Long originalAuthorAmount; // 원작 작가 분배 금액
 
-  @Column(name = "value_each", nullable = false)
-  private Long valueEach; // 각자 정산 금액
+  @Column(name = "derivative_author_amount")
+  private Long derivativeAuthorAmount; // 2차 창작 작가 분배 금액
 
-  @Column(name = "distributed_at")
-  private LocalDateTime distributedAt;
+  @Column(name = "platform_amount")
+  private Long platformAmount; // 플랫폼 분배 금액
+
+  @Column(name = "created_at", nullable = false)
+  private LocalDateTime createdAt;
 
   @PrePersist
   void prePersist() {
-    if (distributedAt == null) {
-      distributedAt = LocalDateTime.now();
+    if (createdAt == null) {
+      createdAt = LocalDateTime.now();
     }
   }
 }
