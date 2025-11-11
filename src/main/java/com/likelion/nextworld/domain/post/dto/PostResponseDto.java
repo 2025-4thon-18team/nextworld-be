@@ -19,7 +19,7 @@ public class PostResponseDto {
   private Long id;
   private String title;
   private String content;
-  private String thumbnailUrl;
+  private Boolean hasImage; // 이미지 포함 여부
 
   private Long workId; // 소속 작품 ID
   private String workTitle; // 소속 작품 제목
@@ -53,7 +53,7 @@ public class PostResponseDto {
     this.id = post.getId();
     this.title = post.getTitle();
     this.content = post.getContent();
-    this.thumbnailUrl = post.getThumbnailUrl();
+    this.hasImage = post.getHasImage();
     this.workId = post.getWork() != null ? post.getWork().getId() : null;
     this.workTitle = post.getWork() != null ? post.getWork().getTitle() : null;
     this.postType = post.getPostType();

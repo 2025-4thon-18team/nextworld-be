@@ -11,11 +11,11 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "reports")
+@Table(name = "comments")
 @Getter
 @Setter
 @NoArgsConstructor
-public class Report {
+public class Comment {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,34 +23,34 @@ public class Report {
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "user_id", nullable = false)
-  private User user;
+  private User user; // 댓글 작성자
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "work_id")
-  private Work work; // NULL 가능
+  @JoinColumn(name = "post_id", nullable = false)
+  private Post post; // 댓글이 달린 포스트
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "post_id")
-  private Post post; // NULL 가능
+  @JoinColumn(name = "parent_comment_id")
+  private Comment parentComment; // 대댓글인 경우 부모 댓글
 
-  @Column(columnDefinition = "TEXT")
-  private String reason;
-
-  @Enumerated(EnumType.STRING)
-  @Column(name = "report_status")
-  private ReportStatus reportStatus = ReportStatus.PENDING;
+  @Column(columnDefinition = "TEXT", nullable = false)
+  private String content; // 댓글 내용
 
   @Column(name = "created_at", nullable = false)
   private LocalDateTime createdAt;
 
-  @Column(name = "reviewed_at")
-  private LocalDateTime reviewedAt;
+  @Column(name = "updated_at")
+  private LocalDateTime updatedAt;
 
   @PrePersist
   public void onCreate() {
     this.createdAt = LocalDateTime.now();
-    if (this.reportStatus == null) {
-      this.reportStatus = ReportStatus.PENDING;
-    }
+    this.updatedAt = LocalDateTime.now();
+  }
+
+  @PreUpdate
+  public void onUpdate() {
+    this.updatedAt = LocalDateTime.now();
   }
 }
+

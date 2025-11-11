@@ -10,26 +10,19 @@ import lombok.Setter;
 @Setter
 public class WorkRequestDto {
   private WorkTypeEnum workType; // 필수: ORIGINAL, DERIVATIVE
-  private Long parentWorkId; // 2차 창작물인 경우 원작 작품 ID
 
   private String title;
   private String description;
   private String coverImageUrl;
   private String tags; // 구분자 문자열: "태그1|태그2|태그3"
 
-  private String universeName;
-  private String universeDescription;
   private String category;
 
-  private WorkType serializationType; // SHORT, SERIALIZED
   private String serializationSchedule; // 구분자 문자열: "월|화|수"
-  private Boolean isSerializing;
 
   private Boolean allowDerivative;
   private String guidelineRelation;
   private String guidelineContent;
   private String guidelineBackground;
   private String bannedWords; // 구분자 문자열: "금지어1|금지어2|금지어3"
-
-  private Boolean allowDerivativeProfit;
 }

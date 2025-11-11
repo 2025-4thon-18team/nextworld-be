@@ -42,8 +42,9 @@ public class Post {
   @Column(columnDefinition = "TEXT", nullable = false)
   private String content;
 
-  @Column(name = "thumbnail_url", columnDefinition = "TEXT")
-  private String thumbnailUrl;
+  @Column(name = "has_image", nullable = false)
+  @Builder.Default
+  private Boolean hasImage = false; // 이미지 포함 여부
 
   // 포스트 타입
   @Enumerated(EnumType.STRING)
@@ -124,6 +125,9 @@ public class Post {
     }
     if (this.commentsCount == null) {
       this.commentsCount = 0L;
+    }
+    if (this.hasImage == null) {
+      this.hasImage = false;
     }
   }
 

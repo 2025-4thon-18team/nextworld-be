@@ -29,6 +29,11 @@ public class User {
   @Column(nullable = false)
   private String nickname; // 닉네임
 
+  private String name; // 이름
+
+  @Column(name = "profile_image_url", columnDefinition = "TEXT")
+  private String profileImageUrl; // 프로필 이미지 URL
+
   @Column(name = "points_balance", nullable = false)
   private Long pointsBalance; // 현재 보유 포인트
 

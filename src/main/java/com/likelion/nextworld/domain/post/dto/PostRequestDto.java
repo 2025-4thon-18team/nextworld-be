@@ -12,7 +12,7 @@ import lombok.Setter;
 public class PostRequestDto {
   private String title;
   private String content;
-  private String thumbnailUrl;
+  private Boolean hasImage; // 이미지 포함 여부
 
   private Long workId; // 작품 회차인 경우 소속 작품 ID
   private PostType postType; // POST, EPISODE
