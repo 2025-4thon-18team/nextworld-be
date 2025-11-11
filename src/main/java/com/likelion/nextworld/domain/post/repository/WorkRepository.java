@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.likelion.nextworld.domain.post.entity.Work;
+import com.likelion.nextworld.domain.post.entity.WorkTypeEnum;
 
 public interface WorkRepository extends JpaRepository<Work, Long> {
 
@@ -16,4 +17,10 @@ public interface WorkRepository extends JpaRepository<Work, Long> {
 
   // 2차 창작 허용된 작품만
   List<Work> findByAllowDerivativeTrue();
+
+  // workType으로 필터링
+  List<Work> findByWorkType(WorkTypeEnum workType);
+
+  // parentWorkId로 검색 (2차 창작물)
+  List<Work> findByParentWorkId(Long parentWorkId);
 }
