@@ -1,29 +1,20 @@
 package com.likelion.nextworld.domain.mypage.service;
 
+import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import com.likelion.nextworld.domain.mypage.dto.ProfileUpdateRequest;
 import com.likelion.nextworld.domain.payment.dto.PayItemResponse;
 import com.likelion.nextworld.domain.payment.dto.PointsResponse;
-import com.likelion.nextworld.domain.payment.entity.PayStatus;
-import com.likelion.nextworld.domain.payment.entity.TransactionType;
 import com.likelion.nextworld.domain.payment.service.PaymentService;
-import com.likelion.nextworld.domain.post.dto.PostResponseDto;
-import com.likelion.nextworld.domain.post.dto.WorkResponseDto;
-import com.likelion.nextworld.domain.post.entity.Post;
-import com.likelion.nextworld.domain.post.entity.Work;
-import com.likelion.nextworld.domain.post.repository.PostRepository;
-import com.likelion.nextworld.domain.post.repository.WorkRepository;
-import com.likelion.nextworld.domain.post.service.PostService;
-import com.likelion.nextworld.domain.post.service.WorkService;
-import com.likelion.nextworld.domain.revenue.repository.RevenueShareRepository;
 import com.likelion.nextworld.domain.user.entity.User;
 import com.likelion.nextworld.domain.user.repository.UserRepository;
 import com.likelion.nextworld.domain.user.security.UserPrincipal;
+import com.likelion.nextworld.global.service.S3Uploader;
 
 import lombok.RequiredArgsConstructor;
 
@@ -32,11 +23,7 @@ import lombok.RequiredArgsConstructor;
 public class MyPageService {
   private final UserRepository userRepository;
   private final PaymentService paymentService;
-  private final RevenueShareRepository revenueShareRepository;
-  private final PostRepository postRepository;
-  private final WorkRepository workRepository;
-  private final PostService postService;
-  private final WorkService workService;
+  private final S3Uploader s3Uploader;
 
   public PointsResponse myPoints(UserPrincipal principal) {
     User me =
@@ -50,46 +37,39 @@ public class MyPageService {
     return paymentService.myPayList(principal);
   }
 
-  @Transactional(readOnly = true)
-  public List<PostResponseDto> getPurchasedPosts(UserPrincipal principal) {
+  public void updateProfile(UserPrincipal principal, ProfileUpdateRequest request) {
     User user =
         userRepository
             .findById(principal.getId())
-            .orElseThrow(() -> new IllegalArgumentException("사용자 없음"));
+            .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
-    // RevenueShare를 통해 구매한 Post 조회
-    List<Post> posts =
-        revenueShareRepository.findPurchasedPostsByUser(
-            user, TransactionType.USE, PayStatus.COMPLETED);
+    if (request.getName() != null && !request.getName().isBlank()) {
+      user.setName(request.getName());
+    }
 
-    return posts.stream().map(postService::toPostResponseDto).toList();
-  }
+    if (request.getBio() != null) {
+      user.setBio(request.getBio());
+    }
 
-  @Transactional(readOnly = true)
-  public List<WorkResponseDto> getPurchasedWorks(UserPrincipal principal) {
-    User user =
-        userRepository
-            .findById(principal.getId())
-            .orElseThrow(() -> new IllegalArgumentException("사용자 없음"));
+    if (request.getTwitter() != null) {
+      user.setTwitter(request.getTwitter());
+    }
 
-    // RevenueShare를 통해 구매한 Post 조회
-    List<Post> posts =
-        revenueShareRepository.findPurchasedPostsByUser(
-            user, TransactionType.USE, PayStatus.COMPLETED);
+    if (request.getContactEmail() != null) {
+      user.setContactEmail(request.getContactEmail());
+    }
 
-    // Post의 work_id와 parent_work_id를 수집
-    Set<Long> workIds =
-        posts.stream()
-            .flatMap(
-                post ->
-                    java.util.stream.Stream.of(
-                            post.getWork() != null ? post.getWork().getId() : null,
-                            post.getParentWork() != null ? post.getParentWork().getId() : null)
-                        .filter(java.util.Objects::nonNull))
-            .collect(Collectors.toSet());
+    MultipartFile profileImage = request.getProfileImage();
+    if (profileImage != null && !profileImage.isEmpty()) {
+      try {
+        String imageUrl = s3Uploader.upload(profileImage, "profile");
+        user.setProfileImageUrl(imageUrl);
+      } catch (IOException e) {
+        throw new RuntimeException("프로필 이미지 업로드에 실패했습니다.", e);
+      }
+    }
 
-    List<Work> works = workRepository.findAllById(workIds);
-
-    return works.stream().map(workService::toWorkResponseDto).toList();
+    user.setUpdatedAt(LocalDateTime.now());
+    userRepository.save(user);
   }
 }

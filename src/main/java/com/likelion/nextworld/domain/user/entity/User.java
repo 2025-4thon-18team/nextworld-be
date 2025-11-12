@@ -20,6 +20,9 @@ public class User {
   @Column(name = "user_id")
   private Long userId; // 사용자ID
 
+  @Column(nullable = false)
+  private String name; // 이름
+
   @Column(nullable = false, unique = true)
   private String email; // 이메일
 
@@ -42,6 +45,15 @@ public class User {
 
   @Column(name = "updated_at")
   private LocalDateTime updatedAt; // 수정일
+
+  private String profileImageUrl; // 프로필 이미지
+
+  @Column(length = 200)
+  private String bio; // 자기소개
+
+  private String twitter; // 트위터 계정
+
+  private String contactEmail; // 연락용 이메일
 
   // 포인트 적립
   public void increasePoints(Long amount) {

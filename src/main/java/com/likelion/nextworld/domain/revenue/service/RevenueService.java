@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.likelion.nextworld.domain.payment.entity.Pay;
 import com.likelion.nextworld.domain.payment.repository.PayRepository;
 import com.likelion.nextworld.domain.post.entity.Post;
+import com.likelion.nextworld.domain.post.entity.Work;
 import com.likelion.nextworld.domain.post.repository.PostRepository;
 import com.likelion.nextworld.domain.revenue.dto.RevenueDashboardResponse;
 import com.likelion.nextworld.domain.revenue.dto.RevenueSaleItemResponse;
@@ -38,41 +39,47 @@ public class RevenueService {
 
     Pay pay =
         payRepository.findById(payId).orElseThrow(() -> new IllegalArgumentException("결제 내역 없음"));
-
     Post post =
         postRepository.findById(postId).orElseThrow(() -> new IllegalArgumentException("포스트 없음"));
+    Work work = post.getParentWork(); // ✅ 이건 있음 (Post → Work)
 
-    User derivativeAuthor = post.getAuthor();
-    User originalAuthor = null;
+    User platformAdmin =
+        userRepository.findById(1L).orElseThrow(() -> new IllegalArgumentException("플랫폼 관리자 없음"));
+    long amount = pay.getAmount();
 
-    // 원작자가 있는 경우 (2차 창작인 경우)
-    if (post.getParentWork() != null) {
-      originalAuthor = post.getParentWork().getAuthor();
+    // 무료 작품은 분배 없음
+    if (Boolean.FALSE.equals(work.getIsPaid())) return;
+
+    // 1차 창작물(Post가 아닌, 원작 Work만 존재) → 5:5
+    // Post는 항상 2차니까, 이 경우는 else로 처리할 수도 있음
+    if (post.getParentWork() == null) {
+      long authorShare = amount * 50 / 100;
+      long platformShare = amount * 50 / 100;
+      saveRevenueShares(pay, work.getAuthor(), authorShare);
+      saveRevenueShares(pay, platformAdmin, platformShare);
+      return;
     }
 
-    // 플랫폼 관리자 (id=1)
-    User platformAdmin =
-        userRepository
-            .findById(1L)
-            .orElseThrow(() -> new IllegalArgumentException("플랫폼 관리자 계정 없음"));
+    // 2차 창작물 → 4:3:3 (원작자, 2차 작가, 플랫폼)
+    Work original = post.getParentWork();
+    if (Boolean.TRUE.equals(original.getAllowDerivative())
+        && Boolean.TRUE.equals(original.getAllowDerivativeProfit())) {
 
-    long amount = pay.getAmount();
-    long authorShare = originalAuthor != null ? amount * 40 / 100 : 0;
-    long derivativeShare = amount * 30 / 100;
-    long platformShare = amount * 30 / 100;
+      long originalShare = amount * 40 / 100;
+      long derivativeShare = amount * 30 / 100;
+      long platformShare = amount * 30 / 100;
 
-    // 수익 분배 저장 (하나의 레코드에 모든 분배 정보 저장)
+      saveRevenueShares(pay, original.getAuthor(), originalShare);
+      saveRevenueShares(pay, work.getAuthor(), derivativeShare);
+      saveRevenueShares(pay, platformAdmin, platformShare);
+    }
+  }
+
+  /** 내부 공통 메서드 - 분배 저장 및 작가 수익 누적 */
+  private void saveRevenueShares(Pay pay, User author, long shareAmount) {
     revenueShareRepository.save(
-        RevenueShare.builder()
-            .pay(pay)
-            .post(post)
-            .originalAuthor(originalAuthor)
-            .derivativeAuthor(derivativeAuthor)
-            .platformUser(platformAdmin)
-            .originalAuthorAmount(authorShare)
-            .derivativeAuthorAmount(derivativeShare)
-            .platformAmount(platformShare)
-            .build());
+        RevenueShare.builder().pay(pay).author(author).shareAmount(shareAmount).build());
+    author.setTotalEarned(author.getTotalEarned() + shareAmount);
   }
 
   @Transactional(readOnly = true)
@@ -80,9 +87,8 @@ public class RevenueService {
     User user =
         userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("사용자 없음"));
 
-    // derivativeAuthor 또는 originalAuthor로 수익 조회
-    long salesCount = revenueShareRepository.countByDerivativeAuthorOrOriginalAuthor(user);
-    long totalRevenue = revenueShareRepository.sumAmountByDerivativeAuthorOrOriginalAuthor(user);
+    long salesCount = revenueShareRepository.countByAuthor(user);
+    long totalRevenue = revenueShareRepository.sumShareAmountByAuthor(user);
 
     long originalAuthorFee = totalRevenue * 40 / 100;
     long platformFee = totalRevenue * 30 / 100;
@@ -103,25 +109,17 @@ public class RevenueService {
     User seller =
         userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("사용자 없음"));
 
-    List<RevenueShare> sales =
-        revenueShareRepository.findSalesByDerivativeAuthorOrOriginalAuthor(seller);
+    List<RevenueShare> sales = revenueShareRepository.findSalesByAuthor(seller);
 
     return sales.stream()
         .map(
-            r -> {
-              Long amount = null;
-              if (r.getDerivativeAuthor() != null && r.getDerivativeAuthor().equals(seller)) {
-                amount = r.getDerivativeAuthorAmount();
-              } else if (r.getOriginalAuthor() != null && r.getOriginalAuthor().equals(seller)) {
-                amount = r.getOriginalAuthorAmount();
-              }
-              return RevenueSaleItemResponse.builder()
-                  .postTitle(r.getPost().getTitle())
-                  .buyerNickname(r.getPay().getPayer().getNickname())
-                  .amount(amount != null ? amount : 0L)
-                  .date(r.getPay().getCreatedAt())
-                  .build();
-            })
+            r ->
+                RevenueSaleItemResponse.builder()
+                    .postTitle(r.getPay().getPost().getTitle())
+                    .buyerNickname(r.getPay().getPayer().getNickname())
+                    .amount(r.getShareAmount())
+                    .date(r.getPay().getCreatedAt())
+                    .build())
         .toList();
   }
 
@@ -131,16 +129,18 @@ public class RevenueService {
     User author =
         userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("사용자 없음"));
 
-    // TODO: RevenueShare의 settled 필드가 제거되었으므로, 정산 로직 재구현 필요
-    // 현재는 임시로 0 반환
-    long unsettledAmount = 0L;
+    long unsettledAmount = revenueShareRepository.findUnsettledAmountByAuthor(author);
     if (unsettledAmount == 0) {
       return new RevenueSettleResponse(0L, 0L, author.getPointsBalance());
     }
 
     long prevBalance = author.getPointsBalance();
+
     author.setPointsBalance(prevBalance + unsettledAmount);
-    userRepository.save(author);
+
+    List<RevenueShare> unsettledShares = revenueShareRepository.findByAuthorAndSettledFalse(author);
+    unsettledShares.forEach(RevenueShare::markAsSettled);
+    revenueShareRepository.saveAll(unsettledShares);
 
     RevenueSettlementHistory history =
         RevenueSettlementHistory.builder()
