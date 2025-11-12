@@ -4,30 +4,23 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.*;
 
-import com.likelion.nextworld.domain.user.entity.User;
-
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "scraps")
+@Table(name = "tags")
 @Getter
 @Setter
 @NoArgsConstructor
-public class Scrap {
+public class Tag {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "user_id", nullable = false)
-  private User user;
-
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "post_id", nullable = false)
-  private Post post;
+  @Column(nullable = false, unique = true)
+  private String name; // 태그 이름
 
   @Column(name = "created_at", nullable = false)
   private LocalDateTime createdAt;

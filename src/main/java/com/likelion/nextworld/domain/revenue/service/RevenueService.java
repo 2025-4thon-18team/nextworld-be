@@ -61,47 +61,18 @@ public class RevenueService {
     long derivativeShare = amount * 30 / 100;
     long platformShare = amount * 30 / 100;
 
-    // 수익 분배 저장 (각자 분배 포인트와 정산 금액은 동일하게 설정)
-    if (originalAuthor != null) {
-      revenueShareRepository.save(
-          RevenueShare.builder()
-              .pay(pay)
-              .post(post)
-              .originalAuthor(originalAuthor)
-              .derivativeAuthor(derivativeAuthor)
-              .admin(platformAdmin)
-              .shareEach(authorShare)
-              .valueEach(authorShare)
-              .build());
-    }
-
+    // 수익 분배 저장 (하나의 레코드에 모든 분배 정보 저장)
     revenueShareRepository.save(
         RevenueShare.builder()
             .pay(pay)
             .post(post)
             .originalAuthor(originalAuthor)
             .derivativeAuthor(derivativeAuthor)
-            .admin(platformAdmin)
-            .shareEach(derivativeShare)
-            .valueEach(derivativeShare)
+            .platformUser(platformAdmin)
+            .originalAuthorAmount(authorShare)
+            .derivativeAuthorAmount(derivativeShare)
+            .platformAmount(platformShare)
             .build());
-
-    revenueShareRepository.save(
-        RevenueShare.builder()
-            .pay(pay)
-            .post(post)
-            .originalAuthor(originalAuthor)
-            .derivativeAuthor(derivativeAuthor)
-            .admin(platformAdmin)
-            .shareEach(platformShare)
-            .valueEach(platformShare)
-            .build());
-
-    if (originalAuthor != null) {
-      originalAuthor.setTotalEarned(originalAuthor.getTotalEarned() + authorShare);
-    }
-    derivativeAuthor.setTotalEarned(derivativeAuthor.getTotalEarned() + derivativeShare);
-    platformAdmin.setTotalEarned(platformAdmin.getTotalEarned() + platformShare);
   }
 
   @Transactional(readOnly = true)
@@ -111,7 +82,7 @@ public class RevenueService {
 
     // derivativeAuthor 또는 originalAuthor로 수익 조회
     long salesCount = revenueShareRepository.countByDerivativeAuthorOrOriginalAuthor(user);
-    long totalRevenue = revenueShareRepository.sumShareEachByDerivativeAuthorOrOriginalAuthor(user);
+    long totalRevenue = revenueShareRepository.sumAmountByDerivativeAuthorOrOriginalAuthor(user);
 
     long originalAuthorFee = totalRevenue * 40 / 100;
     long platformFee = totalRevenue * 30 / 100;
@@ -137,13 +108,20 @@ public class RevenueService {
 
     return sales.stream()
         .map(
-            r ->
-                RevenueSaleItemResponse.builder()
-                    .postTitle(r.getPost().getTitle())
-                    .buyerNickname(r.getPay().getPayer().getNickname())
-                    .amount(r.getShareEach())
-                    .date(r.getPay().getCreatedAt())
-                    .build())
+            r -> {
+              Long amount = null;
+              if (r.getDerivativeAuthor() != null && r.getDerivativeAuthor().equals(seller)) {
+                amount = r.getDerivativeAuthorAmount();
+              } else if (r.getOriginalAuthor() != null && r.getOriginalAuthor().equals(seller)) {
+                amount = r.getOriginalAuthorAmount();
+              }
+              return RevenueSaleItemResponse.builder()
+                  .postTitle(r.getPost().getTitle())
+                  .buyerNickname(r.getPay().getPayer().getNickname())
+                  .amount(amount != null ? amount : 0L)
+                  .date(r.getPay().getCreatedAt())
+                  .build();
+            })
         .toList();
   }
 

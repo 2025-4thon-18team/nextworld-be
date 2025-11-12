@@ -7,11 +7,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.likelion.nextworld.domain.post.dto.PostResponseDto;
+import com.likelion.nextworld.domain.post.dto.WorkGuidelineResponseDto;
 import com.likelion.nextworld.domain.post.dto.WorkRequestDto;
 import com.likelion.nextworld.domain.post.dto.WorkResponseDto;
+import com.likelion.nextworld.domain.post.entity.Tag;
 import com.likelion.nextworld.domain.post.entity.Work;
+import com.likelion.nextworld.domain.post.entity.WorkGuideline;
+import com.likelion.nextworld.domain.post.entity.WorkStatistics;
+import com.likelion.nextworld.domain.post.entity.WorkTag;
 import com.likelion.nextworld.domain.post.entity.WorkTypeEnum;
+import com.likelion.nextworld.domain.post.repository.PostRepository;
+import com.likelion.nextworld.domain.post.repository.TagRepository;
+import com.likelion.nextworld.domain.post.repository.WorkGuidelineRepository;
 import com.likelion.nextworld.domain.post.repository.WorkRepository;
+import com.likelion.nextworld.domain.post.repository.WorkStatisticsRepository;
+import com.likelion.nextworld.domain.post.repository.WorkTagRepository;
 import com.likelion.nextworld.domain.user.entity.User;
 import com.likelion.nextworld.domain.user.repository.UserRepository;
 import com.likelion.nextworld.domain.user.security.JwtTokenProvider;
@@ -23,8 +33,14 @@ import lombok.RequiredArgsConstructor;
 public class WorkService {
 
   private final WorkRepository workRepository;
+  private final PostRepository postRepository;
   private final UserRepository userRepository;
   private final JwtTokenProvider jwtTokenProvider;
+  private final WorkGuidelineRepository workGuidelineRepository;
+  private final WorkStatisticsRepository workStatisticsRepository;
+  private final WorkTagRepository workTagRepository;
+  private final TagRepository tagRepository;
+  private final PostService postService;
 
   private User getUserFromToken(String token) {
     if (token == null || !token.startsWith("Bearer ")) {
@@ -83,24 +99,62 @@ public class WorkService {
     work.setTitle(req.getTitle());
     work.setDescription(req.getDescription());
     work.setCoverImageUrl(req.getCoverImageUrl());
-    work.setTags(req.getTags()); // 구분자 문자열 그대로 저장
-    work.setUniverseName(req.getUniverseName());
-    work.setUniverseDescription(req.getUniverseDescription());
     work.setCategory(req.getCategory());
-    work.setSerializationType(req.getSerializationType());
     work.setSerializationSchedule(req.getSerializationSchedule());
-    work.setIsSerializing(req.getIsSerializing() != null ? req.getIsSerializing() : false);
     work.setAllowDerivative(req.getAllowDerivative() != null ? req.getAllowDerivative() : false);
-    work.setGuidelineRelation(req.getGuidelineRelation());
-    work.setGuidelineContent(req.getGuidelineContent());
-    work.setGuidelineBackground(req.getGuidelineBackground());
-    work.setBannedWords(req.getBannedWords()); // 구분자 문자열 그대로 저장
-    work.setAllowDerivativeProfit(
-        req.getAllowDerivativeProfit() != null ? req.getAllowDerivativeProfit() : false);
     work.setAuthor(author);
 
-    workRepository.save(work);
-    return new WorkResponseDto(work);
+    Work savedWork = workRepository.save(work);
+
+    // WorkGuideline 생성
+    if (req.getGuidelineRelation() != null
+        || req.getGuidelineContent() != null
+        || req.getGuidelineBackground() != null
+        || req.getBannedWords() != null) {
+      WorkGuideline guideline =
+          WorkGuideline.builder()
+              .workId(savedWork.getId())
+              .work(savedWork)
+              .guidelineRelation(req.getGuidelineRelation())
+              .guidelineContent(req.getGuidelineContent())
+              .guidelineBackground(req.getGuidelineBackground())
+              .word(req.getBannedWords())
+              .build();
+      workGuidelineRepository.save(guideline);
+    }
+
+    // WorkStatistics 생성
+    WorkStatistics statistics =
+        WorkStatistics.builder()
+            .workId(savedWork.getId())
+            .work(savedWork)
+            .totalLikesCount(0L)
+            .totalViewsCount(0L)
+            .build();
+    workStatisticsRepository.save(statistics);
+
+    // WorkTag 생성
+    if (req.getTags() != null && !req.getTags().isEmpty()) {
+      for (String tagName : req.getTags()) {
+        if (tagName == null || tagName.trim().isEmpty()) {
+          continue;
+        }
+        Tag tag =
+            tagRepository
+                .findByName(tagName.trim())
+                .orElseGet(
+                    () -> {
+                      Tag newTag = new Tag();
+                      newTag.setName(tagName.trim());
+                      return tagRepository.save(newTag);
+                    });
+
+        WorkTag workTag = WorkTag.builder().work(savedWork).tag(tag).build();
+        workTagRepository.save(workTag);
+      }
+    }
+
+    return toWorkResponseDto(savedWork);
   }
 
   // ✅ 작품 목록 조회
@@ -109,7 +163,7 @@ public class WorkService {
     List<Work> works =
         workType != null ? workRepository.findByWorkType(workType) : workRepository.findAll();
 
-    return works.stream().map(WorkResponseDto::new).collect(Collectors.toList());
+    return works.stream().map(this::toWorkResponseDto).collect(Collectors.toList());
   }
 
   // ✅ 작품 상세 조회
@@ -120,7 +174,7 @@ public class WorkService {
             .findById(id)
             .orElseThrow(() -> new RuntimeException("해당 작품을 찾을 수 없습니다. ID: " + id));
 
-    return new WorkResponseDto(work);
+    return toWorkResponseDto(work);
   }
 
   // ✅ 특정 작품의 회차 목록 조회
@@ -131,7 +185,9 @@ public class WorkService {
             .findById(workId)
             .orElseThrow(() -> new RuntimeException("해당 작품을 찾을 수 없습니다."));
 
-    return work.getEpisodes().stream().map(PostResponseDto::new).collect(Collectors.toList());
+    return work.getEpisodes().stream()
+        .map(post -> postService.toPostResponseDto(post))
+        .collect(Collectors.toList());
   }
 
   // ✅ 특정 작품의 원작 참조 포스트 목록 조회
@@ -142,8 +198,9 @@ public class WorkService {
             .findById(workId)
             .orElseThrow(() -> new RuntimeException("해당 원작을 찾을 수 없습니다."));
 
-    return work.getDerivativePosts().stream()
-        .map(PostResponseDto::new)
+    // parentWork가 현재 작품인 포스트들을 조회
+    return postRepository.findByParentWork(work).stream()
+        .map(post -> postService.toPostResponseDto(post))
         .collect(Collectors.toList());
   }
 
@@ -161,5 +218,63 @@ public class WorkService {
     }
 
     workRepository.delete(work);
+  }
+
+  // Work 엔티티 → WorkResponseDto 변환
+  public WorkResponseDto toWorkResponseDto(Work work) {
+    WorkResponseDto dto = new WorkResponseDto();
+    dto.setId(work.getId());
+    dto.setWorkType(work.getWorkType());
+    dto.setTitle(work.getTitle());
+    dto.setDescription(work.getDescription());
+    dto.setCoverImageUrl(work.getCoverImageUrl());
+    dto.setCategory(work.getCategory());
+    dto.setSerializationSchedule(work.getSerializationSchedule());
+    dto.setAllowDerivative(work.getAllowDerivative());
+    dto.setAuthorName(work.getAuthor() != null ? work.getAuthor().getNickname() : null);
+    dto.setParentWorkId(work.getParentWork() != null ? work.getParentWork().getId() : null);
+    dto.setParentWorkTitle(work.getParentWork() != null ? work.getParentWork().getTitle() : null);
+
+    // WorkStatistics 조회
+    workStatisticsRepository
+        .findById(work.getId())
+        .ifPresent(
+            statistics -> {
+              dto.setTotalLikesCount(statistics.getTotalLikesCount());
+              dto.setTotalViewsCount(statistics.getTotalViewsCount());
+              dto.setTotalRating(statistics.getTotalRating());
+            });
+
+    // WorkTag 조회
+    List<String> tagNames =
+        workTagRepository.findByWork(work).stream()
+            .map(wt -> wt.getTag().getName())
+            .collect(Collectors.toList());
+    dto.setTags(tagNames);
+
+    return dto;
+  }
+
+  // 작품 가이드라인 조회
+  @Transactional(readOnly = true)
+  public WorkGuidelineResponseDto getWorkGuideline(Long workId) {
+    Work work =
+        workRepository
+            .findById(workId)
+            .orElseThrow(() -> new RuntimeException("해당 작품을 찾을 수 없습니다. ID: " + workId));
+
+    return workGuidelineRepository
+        .findById(workId)
+        .map(
+            guideline ->
+                WorkGuidelineResponseDto.builder()
+                    .workId(work.getId())
+                    .workTitle(work.getTitle())
+                    .guidelineRelation(guideline.getGuidelineRelation())
+                    .guidelineContent(guideline.getGuidelineContent())
+                    .guidelineBackground(guideline.getGuidelineBackground())
+                    .bannedWords(guideline.getWord())
+                    .build())
+        .orElseThrow(() -> new RuntimeException("해당 작품의 가이드라인을 찾을 수 없습니다."));
   }
 }

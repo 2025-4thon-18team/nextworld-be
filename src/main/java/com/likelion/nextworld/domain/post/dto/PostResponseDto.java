@@ -2,9 +2,9 @@ package com.likelion.nextworld.domain.post.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import com.likelion.nextworld.domain.post.entity.CreationType;
-import com.likelion.nextworld.domain.post.entity.Post;
 import com.likelion.nextworld.domain.post.entity.PostType;
 import com.likelion.nextworld.domain.post.entity.WorkStatus;
 
@@ -19,7 +19,7 @@ public class PostResponseDto {
   private Long id;
   private String title;
   private String content;
-  private String thumbnailUrl;
+  private Boolean hasImage; // 이미지 포함 여부
 
   private Long workId; // 소속 작품 ID
   private String workTitle; // 소속 작품 제목
@@ -35,9 +35,10 @@ public class PostResponseDto {
   private Boolean isPaid;
   private Long price;
 
-  private String tags; // 구분자 문자열
+  // 태그 (PostTag에서 가져옴)
+  private List<String> tags;
 
-  private Long likesCount;
+  // 통계 (PostStatistics에서 가져옴)
   private Long viewsCount;
   private Long commentsCount;
   private BigDecimal rating;
@@ -47,31 +48,4 @@ public class PostResponseDto {
 
   private LocalDateTime createdAt;
   private LocalDateTime updatedAt;
-
-  // ✅ 엔티티 기반 생성자
-  public PostResponseDto(Post post) {
-    this.id = post.getId();
-    this.title = post.getTitle();
-    this.content = post.getContent();
-    this.thumbnailUrl = post.getThumbnailUrl();
-    this.workId = post.getWork() != null ? post.getWork().getId() : null;
-    this.workTitle = post.getWork() != null ? post.getWork().getTitle() : null;
-    this.postType = post.getPostType();
-    this.episodeNumber = post.getEpisodeNumber();
-    this.parentWorkId = post.getParentWork() != null ? post.getParentWork().getId() : null;
-    this.parentWorkTitle = post.getParentWork() != null ? post.getParentWork().getTitle() : null;
-    this.authorName = post.getAuthor() != null ? post.getAuthor().getNickname() : null;
-    this.creationType = post.getCreationType();
-    this.isPaid = post.getIsPaid();
-    this.price = post.getPrice();
-    this.tags = post.getTags();
-    this.likesCount = post.getLikesCount();
-    this.viewsCount = post.getViewsCount();
-    this.commentsCount = post.getCommentsCount();
-    this.rating = post.getRating();
-    this.status = post.getStatus();
-    this.aiCheck = post.getAiCheck();
-    this.createdAt = post.getCreatedAt();
-    this.updatedAt = post.getUpdatedAt();
-  }
 }

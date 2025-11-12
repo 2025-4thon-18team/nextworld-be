@@ -1,5 +1,6 @@
 package com.likelion.nextworld.domain.post.entity;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import jakarta.persistence.*;
@@ -11,11 +12,11 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "reports")
+@Table(name = "ratings")
 @Getter
 @Setter
 @NoArgsConstructor
-public class Report {
+public class Rating {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,34 +24,29 @@ public class Report {
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "user_id", nullable = false)
-  private User user;
+  private User user; // 평가한 사용자
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "work_id")
-  private Work work; // NULL 가능
+  @JoinColumn(name = "post_id", nullable = false)
+  private Post post; // 평가 대상 포스트
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "post_id")
-  private Post post; // NULL 가능
-
-  @Column(columnDefinition = "TEXT")
-  private String reason;
-
-  @Enumerated(EnumType.STRING)
-  @Column(name = "report_status")
-  private ReportStatus reportStatus = ReportStatus.PENDING;
+  @Column(nullable = false, precision = 3, scale = 2)
+  private BigDecimal score; // 평점 (0.00 ~ 5.00)
 
   @Column(name = "created_at", nullable = false)
   private LocalDateTime createdAt;
 
-  @Column(name = "reviewed_at")
-  private LocalDateTime reviewedAt;
+  @Column(name = "updated_at")
+  private LocalDateTime updatedAt;
 
   @PrePersist
   public void onCreate() {
     this.createdAt = LocalDateTime.now();
-    if (this.reportStatus == null) {
-      this.reportStatus = ReportStatus.PENDING;
-    }
+    this.updatedAt = LocalDateTime.now();
+  }
+
+  @PreUpdate
+  public void onUpdate() {
+    this.updatedAt = LocalDateTime.now();
   }
 }

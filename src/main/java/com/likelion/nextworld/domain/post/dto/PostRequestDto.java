@@ -12,7 +12,7 @@ import lombok.Setter;
 public class PostRequestDto {
   private String title;
   private String content;
-  private String thumbnailUrl;
+  private Boolean hasImage; // 이미지 포함 여부
 
   private Long workId; // 작품 회차인 경우 소속 작품 ID
   private PostType postType; // POST, EPISODE
@@ -24,7 +24,8 @@ public class PostRequestDto {
   private Boolean isPaid;
   private Long price;
 
-  private String tags; // 구분자 문자열: "태그1|태그2|태그3"
+  // 태그 (PostTag로 저장)
+  private java.util.List<String> tags; // 태그 이름 리스트
 
   private WorkStatus status;
 }

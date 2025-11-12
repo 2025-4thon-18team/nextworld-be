@@ -1,6 +1,5 @@
 package com.likelion.nextworld.domain.post.entity;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import jakarta.persistence.*;
@@ -42,8 +41,9 @@ public class Post {
   @Column(columnDefinition = "TEXT", nullable = false)
   private String content;
 
-  @Column(name = "thumbnail_url", columnDefinition = "TEXT")
-  private String thumbnailUrl;
+  @Column(name = "has_image", nullable = false)
+  @Builder.Default
+  private Boolean hasImage = false; // 이미지 포함 여부
 
   // 포스트 타입
   @Enumerated(EnumType.STRING)
@@ -65,26 +65,6 @@ public class Post {
   private Boolean isPaid = false;
 
   private Long price;
-
-  // 태그 (구분자로 구분: 태그1|태그2|태그3)
-  @Column(columnDefinition = "TEXT")
-  private String tags;
-
-  // 통계 (캐시)
-  @Column(name = "likes_count", nullable = false)
-  @Builder.Default
-  private Long likesCount = 0L;
-
-  @Column(name = "views_count", nullable = false)
-  @Builder.Default
-  private Long viewsCount = 0L;
-
-  @Column(name = "comments_count", nullable = false)
-  @Builder.Default
-  private Long commentsCount = 0L;
-
-  @Column(precision = 3, scale = 2)
-  private BigDecimal rating;
 
   // 상태
   @Enumerated(EnumType.STRING)
@@ -116,14 +96,8 @@ public class Post {
     if (this.isPaid == null) {
       this.isPaid = false;
     }
-    if (this.likesCount == null) {
-      this.likesCount = 0L;
-    }
-    if (this.viewsCount == null) {
-      this.viewsCount = 0L;
-    }
-    if (this.commentsCount == null) {
-      this.commentsCount = 0L;
+    if (this.hasImage == null) {
+      this.hasImage = false;
     }
   }
 

@@ -18,8 +18,10 @@ public interface RevenueShareRepository extends JpaRepository<RevenueShare, Long
   }
 
   @Query(
-      "SELECT COALESCE(SUM(r.shareEach), 0) FROM RevenueShare r WHERE r.derivativeAuthor = :user OR r.originalAuthor = :user")
-  long sumShareEachByDerivativeAuthorOrOriginalAuthor(@Param("user") User user);
+      "SELECT COALESCE(SUM(CASE WHEN r.derivativeAuthor = :user THEN r.derivativeAuthorAmount ELSE 0 END) + "
+          + "SUM(CASE WHEN r.originalAuthor = :user THEN r.originalAuthorAmount ELSE 0 END), 0) "
+          + "FROM RevenueShare r WHERE r.derivativeAuthor = :user OR r.originalAuthor = :user")
+  long sumAmountByDerivativeAuthorOrOriginalAuthor(@Param("user") User user);
 
   @Query(
       """
@@ -32,4 +34,18 @@ public interface RevenueShareRepository extends JpaRepository<RevenueShare, Long
                     ORDER BY p.createdAt DESC
                     """)
   List<RevenueShare> findSalesByDerivativeAuthorOrOriginalAuthor(@Param("user") User user);
+
+  // 사용자가 구매한 Post 조회 (Pay의 payer가 해당 사용자인 RevenueShare 조회)
+  @Query(
+      """
+                    SELECT DISTINCT r.post
+                    FROM RevenueShare r
+                    JOIN r.pay p
+                    WHERE p.payer = :user AND p.type = :type AND p.status = :status
+                    ORDER BY p.createdAt DESC
+                    """)
+  List<com.likelion.nextworld.domain.post.entity.Post> findPurchasedPostsByUser(
+      @Param("user") User user,
+      @Param("type") com.likelion.nextworld.domain.payment.entity.TransactionType type,
+      @Param("status") com.likelion.nextworld.domain.payment.entity.PayStatus status);
 }

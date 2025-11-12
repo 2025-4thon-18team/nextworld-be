@@ -11,7 +11,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "likes")
+@Table(
+    name = "likes",
+    uniqueConstraints = {@UniqueConstraint(columnNames = {"user_id", "work_id"})})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -26,12 +28,8 @@ public class Like {
   private User user;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "work_id")
-  private Work work; // NULL 가능
-
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "post_id")
-  private Post post; // NULL 가능
+  @JoinColumn(name = "work_id", nullable = false)
+  private Work work;
 
   @Column(name = "created_at", nullable = false)
   private LocalDateTime createdAt;
