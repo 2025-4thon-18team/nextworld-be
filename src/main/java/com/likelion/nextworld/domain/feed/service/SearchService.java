@@ -1,4 +1,4 @@
-package com.likelion.nextworld.domain.search.service;
+package com.likelion.nextworld.domain.feed.service;
 
 import java.util.Collections;
 import java.util.List;
@@ -6,13 +6,13 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.likelion.nextworld.domain.feed.dto.ListResponse;
 import com.likelion.nextworld.domain.post.dto.PostResponseDto;
 import com.likelion.nextworld.domain.post.dto.WorkResponseDto;
 import com.likelion.nextworld.domain.post.entity.Post;
 import com.likelion.nextworld.domain.post.entity.Work;
 import com.likelion.nextworld.domain.post.repository.PostRepository;
 import com.likelion.nextworld.domain.post.repository.WorkRepository;
-import com.likelion.nextworld.domain.search.dto.SearchResponse;
 
 import lombok.RequiredArgsConstructor;
 
@@ -24,10 +24,10 @@ public class SearchService {
   private final WorkRepository workRepository;
   private final PostRepository postRepository;
 
-  public SearchResponse search(String keyword) {
+  public ListResponse search(String keyword) {
     if (keyword == null || keyword.trim().isEmpty()) {
       // 검색어가 비어있으면 그냥 빈 리스트 반환
-      return SearchResponse.builder()
+      return ListResponse.builder()
           .works(Collections.emptyList())
           .posts(Collections.emptyList())
           .build();
@@ -47,6 +47,6 @@ public class SearchService {
 
     List<PostResponseDto> postDtos = posts.stream().map(PostResponseDto::new).toList();
 
-    return SearchResponse.builder().works(workDtos).posts(postDtos).build();
+    return ListResponse.builder().works(workDtos).posts(postDtos).build();
   }
 }

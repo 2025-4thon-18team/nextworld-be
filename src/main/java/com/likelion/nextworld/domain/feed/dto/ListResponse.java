@@ -1,4 +1,4 @@
-package com.likelion.nextworld.domain.search.dto;
+package com.likelion.nextworld.domain.feed.dto;
 
 import java.util.List;
 
@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SearchResponse {
+public class ListResponse {
 
   private List<WorkResponseDto> works;
   private List<PostResponseDto> posts;

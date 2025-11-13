@@ -22,4 +22,6 @@ public interface WorkRepository extends JpaRepository<Work, Long> {
 
   List<Work> findByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCase(
       String titleKeyword, String descriptionKeyword);
+
+  List<Work> findAllByOrderByIdDesc();
 }
