@@ -19,4 +19,7 @@ public interface WorkRepository extends JpaRepository<Work, Long> {
   List<Work> findByAllowDerivativeTrue();
 
   List<Work> findAllByAuthor(User author);
+
+  List<Work> findByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCase(
+      String titleKeyword, String descriptionKeyword);
 }
