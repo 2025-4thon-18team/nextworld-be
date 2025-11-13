@@ -13,6 +13,8 @@ import com.likelion.nextworld.domain.post.repository.*;
 import com.likelion.nextworld.domain.user.entity.User;
 import com.likelion.nextworld.domain.user.repository.UserRepository;
 import com.likelion.nextworld.domain.user.security.JwtTokenProvider;
+import com.likelion.nextworld.global.ai.AiCheckService;
+import com.likelion.nextworld.global.exception.GuidelineViolationException;
 
 import lombok.RequiredArgsConstructor;
 
@@ -27,6 +29,8 @@ public class PostService {
   private final PostStatisticsRepository postStatisticsRepository;
   private final PostTagRepository postTagRepository;
   private final TagRepository tagRepository;
+  private final WorkGuidelineRepository workGuidelineRepository;
+  private final AiCheckService aiCheckService;
 
   // JWT 토큰에서 사용자 정보 추출
   private User getUserFromToken(String token) {
@@ -66,6 +70,11 @@ public class PostService {
         if (!work.getAuthor().getUserId().equals(currentUser.getUserId())) {
           throw new IllegalStateException("작품의 작가만 회차를 작성할 수 있습니다.");
         }
+        // 🔥 여기 추가: 해당 작품의 마지막 episode_number 찾기
+        Integer lastEpisode = postRepository.findMaxEpisodeNumberByWorkId(work.getId());
+        int nextEpisode = (lastEpisode == null) ? 1 : lastEpisode + 1;
+
+        request.setEpisodeNumber(nextEpisode);
       }
     }
 
@@ -80,6 +89,20 @@ public class PostService {
     // workId 또는 parentWorkId 중 하나는 반드시 지정되어야 함
     if (work == null && parentWork == null) {
       throw new IllegalArgumentException("workId 또는 parentWorkId 중 하나는 필수입니다.");
+    }
+
+    // ===== AI 검수 =====
+    String aiResult = null;
+    if (work != null) {
+      WorkGuideline guideline = workGuidelineRepository.findById(work.getId()).orElse(null);
+
+      if (guideline != null) {
+        String result = aiCheckService.validateContent(request.getContent(), guideline);
+
+        if (!result.equalsIgnoreCase("OK")) {
+          throw new GuidelineViolationException("가이드라인 위반입니다: " + result);
+        }
+      }
     }
 
     Post post =
@@ -97,6 +120,10 @@ public class PostService {
             .price(request.getPrice())
             .status(request.getStatus() != null ? request.getStatus() : WorkStatus.DRAFT)
             .build();
+
+    if (aiResult != null) {
+      post.setAiCheck(aiResult);
+    }
 
     Post saved = postRepository.save(post);
 

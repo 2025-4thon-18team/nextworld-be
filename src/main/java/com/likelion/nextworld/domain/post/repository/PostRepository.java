@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.likelion.nextworld.domain.post.entity.Post;
 import com.likelion.nextworld.domain.post.entity.PostType;
@@ -28,4 +30,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
   // 포스트 타입으로 필터링
   List<Post> findByPostType(PostType postType);
+
+  @Query("SELECT MAX(p.episodeNumber) FROM Post p WHERE p.work.id = :workId")
+  Integer findMaxEpisodeNumberByWorkId(@Param("workId") Long workId);
 }
