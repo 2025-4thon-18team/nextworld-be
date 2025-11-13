@@ -1,21 +1,32 @@
 package com.likelion.nextworld.domain.post.entity;
 
-import java.time.LocalDateTime;
-
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 
 import com.likelion.nextworld.domain.user.entity.User;
+import com.likelion.nextworld.global.common.BaseTimeEntity;
 
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
-@Table(name = "comments")
 @Getter
-@Setter
-@NoArgsConstructor
-public class Comment {
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Builder
+@Table(name = "comments")
+public class Comment extends BaseTimeEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,33 +34,22 @@ public class Comment {
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "user_id", nullable = false)
-  private User user; // 댓글 작성자
+  private User author;
 
+  // FK: post_id (게시글)
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "post_id", nullable = false)
-  private Post post; // 댓글이 달린 포스트
+  private Post post;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "parent_comment_id")
-  private Comment parentComment; // 대댓글인 경우 부모 댓글
+  private Comment parent;
 
-  @Column(columnDefinition = "TEXT", nullable = false)
-  private String content; // 댓글 내용
+  @Lob
+  @Column(name = "content", nullable = false, columnDefinition = "TEXT")
+  private String content;
 
-  @Column(name = "created_at", nullable = false)
-  private LocalDateTime createdAt;
-
-  @Column(name = "updated_at")
-  private LocalDateTime updatedAt;
-
-  @PrePersist
-  public void onCreate() {
-    this.createdAt = LocalDateTime.now();
-    this.updatedAt = LocalDateTime.now();
-  }
-
-  @PreUpdate
-  public void onUpdate() {
-    this.updatedAt = LocalDateTime.now();
+  public void updateContent(String content) {
+    this.content = content;
   }
 }

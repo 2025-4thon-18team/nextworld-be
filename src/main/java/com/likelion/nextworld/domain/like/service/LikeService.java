@@ -32,7 +32,6 @@ public class LikeService {
   private final UserRepository userRepository;
   private final WorkRepository workRepository;
 
-  /** 현재 인증 유저 조회 (공통) */
   private User getCurrentUser(UserPrincipal principal) {
     if (principal == null || principal.getId() == null) {
       throw new CustomException(UserErrorCode.USER_NOT_FOUND);
