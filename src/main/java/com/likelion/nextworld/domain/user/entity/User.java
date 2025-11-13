@@ -18,7 +18,7 @@ public class User {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   @Column(name = "user_id")
-  private Long userId; // 사용자ID
+  private Long userId; // 사용자 ID
 
   @Column(nullable = false)
   private String name; // 이름
@@ -32,8 +32,6 @@ public class User {
   @Column(nullable = false)
   private String nickname; // 닉네임
 
-  private String name; // 이름
-
   @Column(name = "profile_image_url", columnDefinition = "TEXT")
   private String profileImageUrl; // 프로필 이미지 URL
 
@@ -46,14 +44,22 @@ public class User {
   @Column(name = "updated_at")
   private LocalDateTime updatedAt; // 수정일
 
-  private String profileImageUrl; // 프로필 이미지
-
   @Column(length = 200)
   private String bio; // 자기소개
 
   private String twitter; // 트위터 계정
 
   private String contactEmail; // 연락용 이메일
+
+  @PrePersist
+  protected void onCreate() {
+    this.createdAt = LocalDateTime.now();
+  }
+
+  @PreUpdate
+  protected void onUpdate() {
+    this.updatedAt = LocalDateTime.now();
+  }
 
   // 포인트 적립
   public void increasePoints(Long amount) {
