@@ -69,24 +69,17 @@ public class CommentService {
     return commentMapper.toResponse(saved);
   }
 
-  /** 댓글 수정 (QueryParam으로 commentId 전달) */
+  /** 댓글 수정 (commentId 기준) */
   public CommentResponse update(
-      Long postId, Long commentId, UserPrincipal principal, CommentRequest.Update req) {
+      Long commentId, UserPrincipal principal, CommentRequest.Update req) {
     User user = getCurrentUser(principal);
-
-    Post post =
-        postRepository
-            .findById(postId)
-            .orElseThrow(() -> new CustomException(WorkErrorCode.WORK_NOT_FOUND));
 
     Comment comment =
         commentRepository
             .findById(commentId)
             .orElseThrow(() -> new CustomException(CommentErrorCode.COMMENT_NOT_FOUND));
 
-    if (!comment.getPost().getId().equals(post.getId())) {
-      throw new CustomException(CommentErrorCode.COMMENT_FORBIDDEN);
-    }
+    // 작성자 검증
     if (!comment.getAuthor().getUserId().equals(user.getUserId())) {
       throw new CustomException(CommentErrorCode.COMMENT_FORBIDDEN);
     }
@@ -108,30 +101,19 @@ public class CommentService {
   }
 
   /** 댓글 삭제 (자식 댓글은 유지, 해당 댓글만 삭제) */
-  public void delete(Long postId, Long commentId, UserPrincipal principal) {
+  public void delete(Long commentId, UserPrincipal principal) {
     User user = getCurrentUser(principal);
-
-    Post post =
-        postRepository
-            .findById(postId)
-            .orElseThrow(() -> new CustomException(WorkErrorCode.WORK_NOT_FOUND));
 
     Comment comment =
         commentRepository
             .findById(commentId)
             .orElseThrow(() -> new CustomException(CommentErrorCode.COMMENT_NOT_FOUND));
 
-    // 댓글이 해당 게시글에 속하는지 검증
-    if (!comment.getPost().getId().equals(post.getId())) {
-      throw new CustomException(CommentErrorCode.COMMENT_FORBIDDEN);
-    }
-
     // 작성자 검증
     if (!comment.getAuthor().getUserId().equals(user.getUserId())) {
       throw new CustomException(CommentErrorCode.COMMENT_FORBIDDEN);
     }
 
-    // 댓글 삭제 (자식 댓글이 있어도 부모만 삭제)
     commentRepository.delete(comment);
   }
 }
