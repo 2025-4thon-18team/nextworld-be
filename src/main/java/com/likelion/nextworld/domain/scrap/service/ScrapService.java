@@ -2,10 +2,11 @@ package com.likelion.nextworld.domain.scrap.service;
 
 import java.util.List;
 
-import jakarta.transaction.Transactional;
-
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.likelion.nextworld.domain.post.dto.PostResponseDto;
+import com.likelion.nextworld.domain.post.dto.WorkResponseDto;
 import com.likelion.nextworld.domain.post.entity.Post;
 import com.likelion.nextworld.domain.post.entity.Work;
 import com.likelion.nextworld.domain.post.exception.WorkErrorCode;
@@ -114,5 +115,21 @@ public class ScrapService {
   public List<Scrap> getMyScrapEntities(UserPrincipal principal) {
     User user = getCurrentUser(principal);
     return scrapRepository.findAllByUser(user);
+  }
+
+  @Transactional(readOnly = true)
+  public List<WorkResponseDto> getMyWorkScraps(UserPrincipal principal) {
+    User user = getCurrentUser(principal);
+    List<Scrap> scraps = scrapRepository.findAllByUserAndWorkIsNotNullOrderByCreatedAtDesc(user);
+
+    return scraps.stream().map(Scrap::getWork).distinct().map(WorkResponseDto::new).toList();
+  }
+
+  @Transactional(readOnly = true)
+  public List<PostResponseDto> getMyPostScraps(UserPrincipal principal) {
+    User user = getCurrentUser(principal);
+    List<Scrap> scraps = scrapRepository.findAllByUserAndPostIsNotNullOrderByCreatedAtDesc(user);
+
+    return scraps.stream().map(Scrap::getPost).distinct().map(PostResponseDto::new).toList();
   }
 }

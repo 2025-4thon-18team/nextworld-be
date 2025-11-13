@@ -21,4 +21,8 @@ public interface ScrapRepository extends JpaRepository<Scrap, Long> {
   Optional<Scrap> findByUserAndPost(User user, Post post);
 
   List<Scrap> findAllByUser(User user);
+
+  List<Scrap> findAllByUserAndWorkIsNotNullOrderByCreatedAtDesc(User user);
+
+  List<Scrap> findAllByUserAndPostIsNotNullOrderByCreatedAtDesc(User user);
 }

@@ -61,7 +61,7 @@ public class CommentController {
     return ResponseEntity.ok(BaseResponse.success("댓글이 수정되었습니다.", res));
   }
 
-  @Operation(summary = "댓글 최신순 조회", description = "특정 게시글(postId)에 달린 댓글 목록을 최신순으로 조회합니다.")
+  @Operation(summary = "댓글 생성순 조회", description = "특정 게시글(postId)에 달린 댓글 목록을 생성순으로 조회합니다.")
   @GetMapping("/{postId}/comments")
   public ResponseEntity<BaseResponse<List<CommentResponse>>> getComments(
       @PathVariable Long postId) {

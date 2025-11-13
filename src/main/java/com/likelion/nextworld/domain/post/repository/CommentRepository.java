@@ -9,5 +9,5 @@ import com.likelion.nextworld.domain.post.entity.Post;
 
 public interface CommentRepository extends JpaRepository<Comment, Long> {
 
-  List<Comment> findAllByPostOrderByCreatedAtDesc(Post post);
+  List<Comment> findAllByPostOrderByIdAsc(Post post);
 }

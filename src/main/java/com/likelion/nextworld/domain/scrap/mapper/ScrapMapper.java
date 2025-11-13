@@ -1,5 +1,6 @@
-// ScrapMapper.java
 package com.likelion.nextworld.domain.scrap.mapper;
+
+import java.util.List;
 
 import org.springframework.stereotype.Component;
 
@@ -21,5 +22,9 @@ public class ScrapMapper {
         .title(title)
         .createdAt(s.getCreatedAt())
         .build();
+  }
+
+  public List<ScrapResponse> toResponseList(List<Scrap> scraps) {
+    return scraps.stream().map(this::toResponse).toList();
   }
 }

@@ -35,7 +35,11 @@ public class SecurityConfig {
                         "/webjars/**")
                     .permitAll()
                     // ✅ 로그인 관련 API도 허용
-                    .requestMatchers("/api/auth/**")
+                    .requestMatchers(
+                        "/api/auth/**",
+                        "/api/search",
+                        "/api/feed/**",
+                        "/api/posts/{post_id}/comments")
                     .permitAll()
                     // ✅ 나머지는 JWT 인증 필요
                     .anyRequest()
