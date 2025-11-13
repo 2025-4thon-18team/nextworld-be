@@ -1,6 +1,8 @@
 package com.likelion.nextworld.domain.post.entity;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import jakarta.persistence.*;
 
@@ -82,6 +84,9 @@ public class Post {
 
   @Column(name = "updated_at")
   private LocalDateTime updatedAt;
+
+  @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<PostTag> tags = new ArrayList<>();
 
   @PrePersist
   public void onCreate() {

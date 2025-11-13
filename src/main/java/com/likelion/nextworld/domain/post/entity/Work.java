@@ -61,6 +61,9 @@ public class Work {
   @Column(name = "updated_at")
   private LocalDateTime updatedAt;
 
+  @OneToMany(mappedBy = "work", cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<WorkTag> tags = new ArrayList<>();
+
   @PrePersist
   public void onCreate() {
     this.createdAt = LocalDateTime.now();

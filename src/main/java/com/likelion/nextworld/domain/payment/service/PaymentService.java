@@ -42,14 +42,8 @@ public class PaymentService {
               throw new IllegalStateException("이미 처리된 결제입니다.");
             });
 
-    Pay pay =
-        Pay.builder()
-            .payer(payer)
-            .amount(req.getAmount())
-            .type(TransactionType.CHARGE)
-            .status(PayStatus.PENDING)
-            .impUid(req.getImpUid())
-            .build();
+    Pay pay = Pay.createCharge(payer, req.getAmount(), req.getImpUid());
+
     payRepository.save(pay);
   }
 
@@ -82,15 +76,7 @@ public class PaymentService {
 
     payer.setPointsBalance(payer.getPointsBalance() - req.getAmount());
 
-    Pay pay =
-        Pay.builder()
-            .payer(payer)
-            .amount(req.getAmount())
-            .type(TransactionType.USE)
-            .status(PayStatus.COMPLETED)
-            .postId(req.getPostId())
-            .workId(req.getDerivativeWorkId())
-            .build();
+    Pay pay = Pay.createUse(payer, req.getAmount(), req.getPostId(), req.getDerivativeWorkId());
 
     payRepository.save(pay);
   }
