@@ -42,6 +42,12 @@ public class Pay {
   @Column(name = "created_at", nullable = false)
   private LocalDateTime createdAt;
 
+  @Column(name = "post_id")
+  private Long postId;
+
+  @Column(name = "work_id")
+  private Long workId;
+
   @PrePersist
   void prePersist() {
     if (createdAt == null) createdAt = LocalDateTime.now();

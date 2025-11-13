@@ -18,4 +18,10 @@ public interface PayRepository extends JpaRepository<Pay, Long> {
   List<Pay> findByPayerAndTypeOrderByCreatedAtDesc(User payer, TransactionType type);
 
   List<Pay> findByStatus(PayStatus status);
+
+  List<Pay> findByPayerAndTypeAndPostIdIsNotNullOrderByCreatedAtDesc(
+      User payer, TransactionType type);
+
+  List<Pay> findByPayerAndTypeAndWorkIdIsNotNullOrderByCreatedAtDesc(
+      User payer, TransactionType type);
 }
