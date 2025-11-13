@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.likelion.nextworld.domain.post.entity.Work;
+import com.likelion.nextworld.domain.user.entity.User;
 
 public interface WorkRepository extends JpaRepository<Work, Long> {
 
@@ -16,4 +17,6 @@ public interface WorkRepository extends JpaRepository<Work, Long> {
 
   // 2차 창작 허용된 작품만
   List<Work> findByAllowDerivativeTrue();
+
+  List<Work> findAllByAuthor(User author);
 }

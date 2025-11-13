@@ -80,4 +80,26 @@ public class MyPageController {
     List<PostResponseDto> list = scrapService.getMyPostScraps(user);
     return ResponseEntity.ok(BaseResponse.success("POST 스크랩 목록 조회 완료", list));
   }
+
+  @Operation(
+      summary = "내 작품(Work) 리스트 조회",
+      description = "현재 로그인한 사용자가 작성한 원작 작품(Work) 목록을 조회합니다. (로그인 필요)")
+  @GetMapping("/works")
+  public ResponseEntity<BaseResponse<List<WorkResponseDto>>> getMyWorks(
+      @AuthenticationPrincipal UserPrincipal user) {
+
+    List<WorkResponseDto> list = myPageService.myWorks(user);
+    return ResponseEntity.ok(BaseResponse.success("내 작품 목록 조회 완료", list));
+  }
+
+  @Operation(
+      summary = "내 포스트(Post) 리스트 조회",
+      description = "현재 로그인한 사용자가 작성한 2차 창작물(Post) 목록을 최신순으로 조회합니다. (로그인 필요)")
+  @GetMapping("/posts")
+  public ResponseEntity<BaseResponse<List<PostResponseDto>>> getMyPosts(
+      @AuthenticationPrincipal UserPrincipal user) {
+
+    List<PostResponseDto> list = myPageService.myPosts(user);
+    return ResponseEntity.ok(BaseResponse.success("내 포스트 목록 조회 완료", list));
+  }
 }
