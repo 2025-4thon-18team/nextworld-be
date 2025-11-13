@@ -38,6 +38,10 @@ public class User {
   @Column(name = "points_balance", nullable = false)
   private Long pointsBalance; // 현재 보유 포인트
 
+  @Builder.Default
+  @Column(name = "total_earned")
+  private Long totalEarned = 0L; // 총 수익
+
   @Column(name = "created_at", nullable = false)
   private LocalDateTime createdAt; // 가입일
 
