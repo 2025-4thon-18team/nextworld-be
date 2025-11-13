@@ -1,7 +1,14 @@
 package com.likelion.nextworld.domain.post.controller;
 
+import com.likelion.nextworld.domain.post.dto.CommentRequest;
+import com.likelion.nextworld.domain.post.dto.CommentResponse;
+import com.likelion.nextworld.domain.post.service.CommentService;
+import com.likelion.nextworld.domain.user.security.UserPrincipal;
+import com.likelion.nextworld.global.response.BaseResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
-
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -12,16 +19,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import com.likelion.nextworld.domain.post.dto.CommentRequest;
-import com.likelion.nextworld.domain.post.dto.CommentResponse;
-import com.likelion.nextworld.domain.post.service.CommentService;
-import com.likelion.nextworld.domain.user.security.UserPrincipal;
-import com.likelion.nextworld.global.response.BaseResponse;
-
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
@@ -61,7 +58,7 @@ public class CommentController {
     return ResponseEntity.ok(BaseResponse.success("댓글이 수정되었습니다.", res));
   }
 
-  @Operation(summary = "댓글 최신순 조회", description = "특정 게시글(postId)에 달린 댓글 목록을 최신순으로 조회합니다.")
+  @Operation(summary = "댓글 생성순 조회", description = "특정 게시글(postId)에 달린 댓글 목록을 생성순으로 조회합니다.")
   @GetMapping("/{postId}/comments")
   public ResponseEntity<BaseResponse<List<CommentResponse>>> getComments(
       @PathVariable Long postId) {

@@ -1,10 +1,5 @@
 package com.likelion.nextworld.domain.post.service;
 
-import java.util.List;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.likelion.nextworld.domain.post.dto.CommentRequest;
 import com.likelion.nextworld.domain.post.dto.CommentResponse;
 import com.likelion.nextworld.domain.post.entity.Comment;
@@ -19,8 +14,10 @@ import com.likelion.nextworld.domain.user.exception.UserErrorCode;
 import com.likelion.nextworld.domain.user.repository.UserRepository;
 import com.likelion.nextworld.domain.user.security.UserPrincipal;
 import com.likelion.nextworld.global.exception.CustomException;
-
+import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -41,7 +38,9 @@ public class CommentService {
         .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
   }
 
-  /** 댓글/대댓글 생성 */
+  /**
+   * 댓글/대댓글 생성
+   */
   public CommentResponse create(Long postId, UserPrincipal principal, CommentRequest.Create req) {
     User user = getCurrentUser(principal);
 
@@ -69,7 +68,9 @@ public class CommentService {
     return commentMapper.toResponse(saved);
   }
 
-  /** 댓글 수정 (commentId 기준) */
+  /**
+   * 댓글 수정 (commentId 기준)
+   */
   public CommentResponse update(
       Long commentId, UserPrincipal principal, CommentRequest.Update req) {
     User user = getCurrentUser(principal);
@@ -88,7 +89,9 @@ public class CommentService {
     return commentMapper.toResponse(comment);
   }
 
-  /** 댓글 조회 (최신순) */
+  /**
+   * 댓글 조회 (최신순)
+   */
   @Transactional(readOnly = true)
   public List<CommentResponse> getListByPost(Long postId) {
     Post post =
@@ -96,11 +99,13 @@ public class CommentService {
             .findById(postId)
             .orElseThrow(() -> new CustomException(WorkErrorCode.WORK_NOT_FOUND));
 
-    List<Comment> comments = commentRepository.findAllByPostOrderByCreatedAtDesc(post);
+    List<Comment> comments = commentRepository.findAllByPostOrderByIdAsc(post);
     return commentMapper.toResponseList(comments);
   }
 
-  /** 댓글 삭제 (자식 댓글은 유지, 해당 댓글만 삭제) */
+  /**
+   * 댓글 삭제 (자식 댓글은 유지, 해당 댓글만 삭제)
+   */
   public void delete(Long commentId, UserPrincipal principal) {
     User user = getCurrentUser(principal);
 
