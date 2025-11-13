@@ -1,5 +1,7 @@
 package com.likelion.nextworld.domain.payment.service;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -10,6 +12,10 @@ import com.likelion.nextworld.domain.payment.entity.Pay;
 import com.likelion.nextworld.domain.payment.entity.PayStatus;
 import com.likelion.nextworld.domain.payment.entity.TransactionType;
 import com.likelion.nextworld.domain.payment.repository.PayRepository;
+import com.likelion.nextworld.domain.post.entity.Post;
+import com.likelion.nextworld.domain.post.entity.Work;
+import com.likelion.nextworld.domain.post.repository.PostRepository;
+import com.likelion.nextworld.domain.post.repository.WorkRepository;
 import com.likelion.nextworld.domain.user.entity.User;
 import com.likelion.nextworld.domain.user.repository.UserRepository;
 import com.likelion.nextworld.domain.user.security.UserPrincipal;
@@ -21,6 +27,8 @@ import lombok.RequiredArgsConstructor;
 public class PaymentService {
   private final PayRepository payRepository;
   private final UserRepository userRepository;
+  private final WorkRepository workRepository;
+  private final PostRepository postRepository;
   private final PortOneClient portOneClient;
 
   @Transactional
@@ -80,6 +88,8 @@ public class PaymentService {
             .amount(req.getAmount())
             .type(TransactionType.USE)
             .status(PayStatus.COMPLETED)
+            .postId(req.getPostId())
+            .workId(req.getDerivativeWorkId())
             .build();
 
     payRepository.save(pay);
@@ -180,5 +190,73 @@ public class PaymentService {
                     .date(p.getCreatedAt())
                     .build())
         .toList();
+  }
+
+  @Transactional(readOnly = true)
+  public List<PurchasedWorkResponse> getPurchasedPosts(UserPrincipal principal) {
+    User user = getUser(principal.getId());
+
+    List<Pay> purchases =
+        payRepository.findByPayerAndTypeAndPostIdIsNotNullOrderByCreatedAtDesc(
+            user, TransactionType.USE);
+
+    return purchases.stream()
+        .map(
+            p -> {
+              Post post = postRepository.findById(p.getPostId()).orElse(null);
+
+              return PurchasedWorkResponse.builder()
+                  .postId(p.getPostId())
+                  .workId(post != null && post.getWork() != null ? post.getWork().getId() : null)
+                  .title(post != null ? post.getTitle() : null)
+                  .amount(p.getAmount())
+                  .purchasedAt(p.getCreatedAt())
+                  .build();
+            })
+        .toList();
+  }
+
+  @Transactional(readOnly = true)
+  public List<PurchasedWorkResponse> getPurchasedWorks(UserPrincipal principal) {
+    User user = getUser(principal.getId());
+
+    List<Pay> purchases =
+        payRepository.findByPayerAndTypeAndWorkIdIsNotNullOrderByCreatedAtDesc(
+            user, TransactionType.USE);
+
+    return purchases.stream()
+        .map(
+            p -> {
+              Work work = workRepository.findById(p.getWorkId()).orElse(null);
+
+              return PurchasedWorkResponse.builder()
+                  .postId(null)
+                  .workId(p.getWorkId())
+                  .title(work != null ? work.getTitle() : null)
+                  .coverImageUrl(work != null ? work.getCoverImageUrl() : null)
+                  .workType(work != null ? work.getWorkType().name() : null)
+                  .parentWorkId(
+                      work != null && work.getParentWork() != null
+                          ? work.getParentWork().getId()
+                          : null)
+                  .amount(p.getAmount())
+                  .purchasedAt(p.getCreatedAt())
+                  .build();
+            })
+        .toList();
+  }
+
+  @Transactional(readOnly = true)
+  public List<PurchasedWorkResponse> getAllPurchases(UserPrincipal principal) {
+    List<PurchasedWorkResponse> posts = getPurchasedPosts(principal);
+    List<PurchasedWorkResponse> works = getPurchasedWorks(principal);
+
+    List<PurchasedWorkResponse> all = new ArrayList<>();
+    all.addAll(posts);
+    all.addAll(works);
+
+    all.sort(Comparator.comparing(PurchasedWorkResponse::getPurchasedAt).reversed());
+
+    return all;
   }
 }
