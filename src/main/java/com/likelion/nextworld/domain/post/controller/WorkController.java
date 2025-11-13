@@ -1,9 +1,11 @@
 package com.likelion.nextworld.domain.post.controller;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.likelion.nextworld.domain.post.dto.PostResponseDto;
 import com.likelion.nextworld.domain.post.dto.WorkGuidelineResponseDto;
@@ -14,7 +16,6 @@ import com.likelion.nextworld.domain.post.service.WorkService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
@@ -22,7 +23,6 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/works")
 @RequiredArgsConstructor
 @Tag(name = "Work", description = "작품 관리 API")
-@SecurityRequirement(name = "Authorization")
 public class WorkController {
 
   private final WorkService workService;
@@ -80,5 +80,16 @@ public class WorkController {
   public ResponseEntity<WorkGuidelineResponseDto> getWorkGuideline(
       @Parameter(description = "작품 ID", required = true) @PathVariable Long workId) {
     return ResponseEntity.ok(workService.getWorkGuideline(workId));
+  }
+
+  // 이미지 업로드만 (S3에 연결)
+  @PostMapping(
+      value = "/upload-image",
+      consumes = {"multipart/form-data"})
+  public ResponseEntity<String> uploadImage(
+      @RequestHeader("Authorization") String token, @RequestPart("file") MultipartFile file)
+      throws IOException {
+    String imageUrl = workService.uploadImage(token, file);
+    return ResponseEntity.ok(imageUrl); // URL만 반환
   }
 }

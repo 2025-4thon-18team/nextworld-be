@@ -1,30 +1,23 @@
 package com.likelion.nextworld.domain.post.service;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.likelion.nextworld.domain.post.dto.PostResponseDto;
 import com.likelion.nextworld.domain.post.dto.WorkGuidelineResponseDto;
 import com.likelion.nextworld.domain.post.dto.WorkRequestDto;
 import com.likelion.nextworld.domain.post.dto.WorkResponseDto;
-import com.likelion.nextworld.domain.post.entity.Tag;
-import com.likelion.nextworld.domain.post.entity.Work;
-import com.likelion.nextworld.domain.post.entity.WorkGuideline;
-import com.likelion.nextworld.domain.post.entity.WorkStatistics;
-import com.likelion.nextworld.domain.post.entity.WorkTag;
-import com.likelion.nextworld.domain.post.entity.WorkTypeEnum;
-import com.likelion.nextworld.domain.post.repository.PostRepository;
-import com.likelion.nextworld.domain.post.repository.TagRepository;
-import com.likelion.nextworld.domain.post.repository.WorkGuidelineRepository;
-import com.likelion.nextworld.domain.post.repository.WorkRepository;
-import com.likelion.nextworld.domain.post.repository.WorkStatisticsRepository;
-import com.likelion.nextworld.domain.post.repository.WorkTagRepository;
+import com.likelion.nextworld.domain.post.entity.*;
+import com.likelion.nextworld.domain.post.repository.*;
 import com.likelion.nextworld.domain.user.entity.User;
 import com.likelion.nextworld.domain.user.repository.UserRepository;
 import com.likelion.nextworld.domain.user.security.JwtTokenProvider;
+import com.likelion.nextworld.global.service.S3Uploader;
 
 import lombok.RequiredArgsConstructor;
 
@@ -41,6 +34,18 @@ public class WorkService {
   private final WorkTagRepository workTagRepository;
   private final TagRepository tagRepository;
   private final PostService postService;
+  private final S3Uploader s3Uploader;
+
+  // 이미지 업로드 전용
+  @Transactional
+  public String uploadImage(String token, MultipartFile file) throws IOException {
+    if (token.startsWith("Bearer ")) token = token.substring(7);
+    if (!jwtTokenProvider.validateToken(token))
+      throw new RuntimeException("Invalid or expired token");
+
+    // S3 업로드
+    return s3Uploader.upload(file, "work");
+  }
 
   private User getUserFromToken(String token) {
     if (token == null || !token.startsWith("Bearer ")) {
@@ -113,8 +118,7 @@ public class WorkService {
         || req.getBannedWords() != null) {
       WorkGuideline guideline =
           WorkGuideline.builder()
-              .workId(savedWork.getId())
-              .work(savedWork)
+              .work(savedWork) // 이것만 넣으면 OK
               .guidelineRelation(req.getGuidelineRelation())
               .guidelineContent(req.getGuidelineContent())
               .guidelineBackground(req.getGuidelineBackground())
@@ -126,11 +130,11 @@ public class WorkService {
     // WorkStatistics 생성
     WorkStatistics statistics =
         WorkStatistics.builder()
-            .workId(savedWork.getId())
-            .work(savedWork)
+            .work(savedWork) // PK는 Hibernate가 자동으로 work.id로 채워줌
             .totalLikesCount(0L)
             .totalViewsCount(0L)
             .build();
+
     workStatisticsRepository.save(statistics);
 
     // WorkTag 생성

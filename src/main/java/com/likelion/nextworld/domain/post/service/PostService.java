@@ -8,18 +8,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.likelion.nextworld.domain.post.dto.PostRequestDto;
 import com.likelion.nextworld.domain.post.dto.PostResponseDto;
-import com.likelion.nextworld.domain.post.entity.Post;
-import com.likelion.nextworld.domain.post.entity.PostStatistics;
-import com.likelion.nextworld.domain.post.entity.PostTag;
-import com.likelion.nextworld.domain.post.entity.PostType;
-import com.likelion.nextworld.domain.post.entity.Tag;
-import com.likelion.nextworld.domain.post.entity.Work;
-import com.likelion.nextworld.domain.post.entity.WorkStatus;
-import com.likelion.nextworld.domain.post.repository.PostRepository;
-import com.likelion.nextworld.domain.post.repository.PostStatisticsRepository;
-import com.likelion.nextworld.domain.post.repository.PostTagRepository;
-import com.likelion.nextworld.domain.post.repository.TagRepository;
-import com.likelion.nextworld.domain.post.repository.WorkRepository;
+import com.likelion.nextworld.domain.post.entity.*;
+import com.likelion.nextworld.domain.post.repository.*;
 import com.likelion.nextworld.domain.user.entity.User;
 import com.likelion.nextworld.domain.user.repository.UserRepository;
 import com.likelion.nextworld.domain.user.security.JwtTokenProvider;
@@ -113,11 +103,11 @@ public class PostService {
     // PostStatistics 생성
     PostStatistics statistics =
         PostStatistics.builder()
-            .postId(saved.getId())
-            .post(saved)
+            .post(saved) // PK는 Hibernate가 자동으로 post.id로 설정
             .viewsCount(0L)
             .commentsCount(0L)
             .build();
+
     postStatisticsRepository.save(statistics);
 
     // PostTag 생성
@@ -345,6 +335,12 @@ public class PostService {
         postRepository
             .findById(id)
             .orElseThrow(() -> new RuntimeException("해당 포스트를 찾을 수 없습니다. ID: " + id));
+
+    // 🔥 발행된 포스트만 조회 가능
+    if (post.getStatus() != WorkStatus.PUBLISHED) {
+      throw new RuntimeException("발행된 포스트만 조회할 수 있습니다.");
+    }
+
     return toPostResponseDto(post);
   }
 
