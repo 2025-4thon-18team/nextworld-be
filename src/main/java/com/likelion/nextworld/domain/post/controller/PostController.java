@@ -105,4 +105,26 @@ public class PostController {
     postService.deletePost(id, token);
     return ResponseEntity.ok("포스트가 성공적으로 삭제되었습니다. ID: " + id);
   }
+
+  @Operation(summary = "임시저장 수정", description = "임시저장된 포스트만 수정할 수 있습니다.")
+  @PutMapping("/drafts/{id}")
+  public ResponseEntity<PostResponseDto> updateDraft(
+      @Parameter(description = "포스트 ID", required = true) @PathVariable Long id,
+      @Parameter(description = "Authorization 토큰", required = true) @RequestHeader("Authorization")
+          String token,
+      @RequestBody PostRequestDto request) {
+
+    return ResponseEntity.ok(postService.updateDraft(id, request, token));
+  }
+
+  @Operation(summary = "임시저장 삭제", description = "임시저장된 포스트만 삭제할 수 있습니다.")
+  @DeleteMapping("/drafts/{id}")
+  public ResponseEntity<String> deleteDraft(
+      @Parameter(description = "포스트 ID", required = true) @PathVariable Long id,
+      @Parameter(description = "Authorization 토큰", required = true) @RequestHeader("Authorization")
+          String token) {
+
+    postService.deleteDraft(id, token);
+    return ResponseEntity.ok("임시저장이 성공적으로 삭제되었습니다. ID: " + id);
+  }
 }

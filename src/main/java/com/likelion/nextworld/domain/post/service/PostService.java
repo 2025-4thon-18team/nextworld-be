@@ -355,6 +355,69 @@ public class PostService {
     postRepository.delete(post);
   }
 
+  // 임시저장 수정
+  @Transactional
+  public PostResponseDto updateDraft(Long id, PostRequestDto request, String token) {
+    User currentUser = getUserFromToken(token);
+
+    Post draft =
+        postRepository.findById(id).orElseThrow(() -> new RuntimeException("임시저장을 찾을 수 없습니다."));
+
+    if (!draft.getAuthor().getUserId().equals(currentUser.getUserId())) {
+      throw new RuntimeException("본인만 임시저장을 수정할 수 있습니다.");
+    }
+
+    if (draft.getStatus() != WorkStatus.DRAFT) {
+      throw new RuntimeException("발행된 포스트는 임시저장 수정이 불가합니다.");
+    }
+
+    draft.setTitle(request.getTitle());
+    draft.setContent(request.getContent());
+    if (request.getHasImage() != null) draft.setHasImage(request.getHasImage());
+    draft.setCreationType(request.getCreationType());
+
+    // 태그 수정
+    if (request.getTags() != null) {
+      postTagRepository.deleteByPost(draft);
+
+      for (String tagName : request.getTags()) {
+        Tag tag =
+            tagRepository
+                .findByName(tagName.trim())
+                .orElseGet(
+                    () -> {
+                      Tag newTag = new Tag();
+                      newTag.setName(tagName.trim());
+                      return tagRepository.save(newTag);
+                    });
+
+        PostTag pt = PostTag.builder().post(draft).tag(tag).build();
+        postTagRepository.save(pt);
+      }
+    }
+
+    return toPostResponseDto(draft);
+  }
+
+  // 임시저장 삭제
+  @Transactional
+  public void deleteDraft(Long id, String token) {
+    User currentUser = getUserFromToken(token);
+
+    Post draft =
+        postRepository.findById(id).orElseThrow(() -> new RuntimeException("임시저장을 찾을 수 없습니다."));
+
+    if (!draft.getAuthor().getUserId().equals(currentUser.getUserId())) {
+      throw new RuntimeException("본인만 임시저장을 삭제할 수 있습니다.");
+    }
+
+    if (draft.getStatus() != WorkStatus.DRAFT) {
+      throw new RuntimeException("발행된 포스트는 임시저장 삭제가 불가합니다.");
+    }
+
+    postRepository.delete(draft);
+  }
+
   // 포스트 상세 조회
   @Transactional(readOnly = true)
   public PostResponseDto getPostById(Long id) {
