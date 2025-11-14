@@ -355,6 +355,42 @@ public class PostService {
     postRepository.delete(post);
   }
 
+  // 임시저장 수정
+  @Transactional
+  public PostResponseDto updateDraft(Long id, PostRequestDto request, String token) {
+    User currentUser = getUserFromToken(token);
+
+    // 본인 임시저장 글인지 확인
+    Post draft =
+        postRepository
+            .findByIdAndAuthorAndStatus(id, currentUser, WorkStatus.DRAFT)
+            .orElseThrow(() -> new RuntimeException("본인의 임시저장 글이 아니거나 존재하지 않습니다."));
+
+    // 수정 가능한 필드만 업데이트
+    if (request.getTitle() != null) draft.setTitle(request.getTitle());
+    if (request.getContent() != null) draft.setContent(request.getContent());
+    if (request.getHasImage() != null) draft.setHasImage(request.getHasImage());
+    if (request.getCreationType() != null) draft.setCreationType(request.getCreationType());
+
+    // 저장
+    Post updated = postRepository.save(draft);
+
+    return toPostResponseDto(updated);
+  }
+
+  // 임시저장 삭제
+  @Transactional
+  public void deleteDraft(Long id, String token) {
+    User currentUser = getUserFromToken(token);
+
+    Post draft =
+        postRepository
+            .findByIdAndAuthorAndStatus(id, currentUser, WorkStatus.DRAFT)
+            .orElseThrow(() -> new RuntimeException("본인의 임시저장 글이 아니거나 존재하지 않습니다."));
+
+    postRepository.delete(draft);
+  }
+
   // 포스트 상세 조회
   @Transactional(readOnly = true)
   public PostResponseDto getPostById(Long id) {
@@ -389,6 +425,69 @@ public class PostService {
     return postRepository.findByWorkIsNull().stream()
         .map(this::toPostResponseDto)
         .collect(Collectors.toList());
+  }
+
+  // 전체 EPISODE 조회
+  public List<PostResponseDto> getAllEpisodes() {
+    return postRepository.findByPostTypeAndStatus(PostType.EPISODE, WorkStatus.PUBLISHED).stream()
+        .map(this::toPostResponseDto)
+        .toList();
+  }
+
+  // 특정 작품 회차 조회
+  public List<PostResponseDto> getEpisodesByWork(Long workId) {
+    Work work =
+        workRepository.findById(workId).orElseThrow(() -> new RuntimeException("작품을 찾을 수 없습니다."));
+
+    return postRepository
+        .findByWorkAndPostTypeAndStatusOrderByEpisodeNumberAsc(
+            work, PostType.EPISODE, WorkStatus.PUBLISHED)
+        .stream()
+        .map(this::toPostResponseDto)
+        .toList();
+  }
+
+  // 이전 회차 조회
+  public PostResponseDto getPreviousEpisode(Long id) {
+    Post current =
+        postRepository.findById(id).orElseThrow(() -> new RuntimeException("회차를 찾을 수 없습니다."));
+
+    return postRepository
+        .findTopByWorkAndEpisodeNumberLessThanAndPostTypeAndStatusOrderByEpisodeNumberDesc(
+            current.getWork(), current.getEpisodeNumber(), PostType.EPISODE, WorkStatus.PUBLISHED)
+        .map(this::toPostResponseDto)
+        .orElse(null);
+  }
+
+  // 다음 회차 조회
+  public PostResponseDto getNextEpisode(Long id) {
+    Post current =
+        postRepository.findById(id).orElseThrow(() -> new RuntimeException("회차를 찾을 수 없습니다."));
+
+    return postRepository
+        .findTopByWorkAndEpisodeNumberGreaterThanAndPostTypeAndStatusOrderByEpisodeNumberAsc(
+            current.getWork(), current.getEpisodeNumber(), PostType.EPISODE, WorkStatus.PUBLISHED)
+        .map(this::toPostResponseDto)
+        .orElse(null);
+  }
+
+  // post만 조회
+  public List<PostResponseDto> getPublishedPosts() {
+    return postRepository.findByPostTypeAndStatus(PostType.POST, WorkStatus.PUBLISHED).stream()
+        .map(this::toPostResponseDto)
+        .toList();
+  }
+
+  // 작가의 post 조회
+  public List<PostResponseDto> getPostsByAuthor(Long authorId) {
+    User author =
+        userRepository.findById(authorId).orElseThrow(() -> new RuntimeException("작가를 찾을 수 없습니다."));
+
+    return postRepository
+        .findByAuthorAndPostTypeAndStatus(author, PostType.POST, WorkStatus.PUBLISHED)
+        .stream()
+        .map(this::toPostResponseDto)
+        .toList();
   }
 
   // Post 엔티티 → PostResponseDto 변환

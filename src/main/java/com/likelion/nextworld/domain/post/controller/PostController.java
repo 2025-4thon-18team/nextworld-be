@@ -46,15 +46,11 @@ public class PostController {
     return ResponseEntity.ok(BaseResponse.success("작품 회차 포스트 생성 완료", response));
   }
 
-  @Operation(summary = "포스트 목록 조회", description = "포스트 목록을 조회합니다. workId로 필터링 가능합니다.")
+  @Operation(summary = "포스트 목록 조회", description = "독립 포스트(POST)만 조회합니다.")
   @GetMapping
-  public ResponseEntity<BaseResponse<List<PostResponseDto>>> getAllPosts(
-      @RequestParam(required = false) Long workId) {
-
-    List<PostResponseDto> list =
-        (workId != null) ? postService.getWorkPosts(workId) : postService.getIndependentPosts();
-
-    return ResponseEntity.ok(BaseResponse.success("포스트 목록 조회 완료", list));
+  public ResponseEntity<BaseResponse<List<PostResponseDto>>> getAllPosts() {
+    return ResponseEntity.ok(
+        BaseResponse.success("POST 목록 조회 완료", postService.getPublishedPosts()));
   }
 
   @Operation(summary = "포스트 상세 조회", description = "포스트 ID로 상세 정보를 조회합니다.")
@@ -109,5 +105,25 @@ public class PostController {
 
     postService.deletePost(id, token);
     return ResponseEntity.ok(BaseResponse.success("포스트 삭제 완료", null));
+  }
+
+  @Operation(summary = "임시저장 수정", description = "임시저장된 포스트를 수정합니다. 작성자만 수정할 수 있습니다.")
+  @PutMapping("/drafts/{id}")
+  public ResponseEntity<BaseResponse<PostResponseDto>> updateDraft(
+      @PathVariable Long id,
+      @RequestHeader("Authorization") String token,
+      @RequestBody PostRequestDto request) {
+
+    PostResponseDto response = postService.updateDraft(id, request, token);
+    return ResponseEntity.ok(BaseResponse.success("임시저장 수정 완료", response));
+  }
+
+  @Operation(summary = "임시저장 삭제", description = "임시저장된 포스트를 삭제합니다. 작성자만 삭제할 수 있습니다.")
+  @DeleteMapping("/drafts/{id}")
+  public ResponseEntity<BaseResponse<Void>> deleteDraft(
+      @PathVariable Long id, @RequestHeader("Authorization") String token) {
+
+    postService.deleteDraft(id, token);
+    return ResponseEntity.ok(BaseResponse.success("임시저장 삭제 완료", null));
   }
 }

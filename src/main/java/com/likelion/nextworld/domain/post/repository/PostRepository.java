@@ -40,4 +40,18 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
   @Query("SELECT MAX(p.episodeNumber) FROM Post p WHERE p.work.id = :workId")
   Integer findMaxEpisodeNumberByWorkId(@Param("workId") Long workId);
+
+  List<Post> findByPostTypeAndStatus(PostType postType, WorkStatus status);
+
+  List<Post> findByWorkAndPostTypeAndStatusOrderByEpisodeNumberAsc(
+      Work work, PostType postType, WorkStatus status);
+
+  Optional<Post> findTopByWorkAndEpisodeNumberLessThanAndPostTypeAndStatusOrderByEpisodeNumberDesc(
+      Work work, Integer episodeNumber, PostType postType, WorkStatus status);
+
+  Optional<Post>
+      findTopByWorkAndEpisodeNumberGreaterThanAndPostTypeAndStatusOrderByEpisodeNumberAsc(
+          Work work, Integer episodeNumber, PostType postType, WorkStatus status);
+
+  List<Post> findByAuthorAndPostTypeAndStatus(User author, PostType postType, WorkStatus status);
 }
