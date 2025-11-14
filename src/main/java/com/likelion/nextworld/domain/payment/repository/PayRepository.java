@@ -24,4 +24,6 @@ public interface PayRepository extends JpaRepository<Pay, Long> {
 
   List<Pay> findByPayerAndTypeAndWorkIdIsNotNullOrderByCreatedAtDesc(
       User payer, TransactionType type);
+
+  boolean existsByPayerAndPostId(User payer, Long postId);
 }

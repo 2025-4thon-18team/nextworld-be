@@ -42,12 +42,10 @@ public class PaymentController {
 
   // 포인트 사용
   @PostMapping("/use")
-  public ResponseEntity<BaseResponse<Void>> use(
+  public ResponseEntity<PayItemResponse> use(
       @AuthenticationPrincipal UserPrincipal user, @RequestBody UseRequest req) {
-
-    paymentService.use(user, req);
-
-    return ResponseEntity.ok(BaseResponse.success("포인트 사용이 완료되었습니다.", null));
+    PayItemResponse response = paymentService.use(user, req);
+    return ResponseEntity.ok(response);
   }
 
   // 환불 요청

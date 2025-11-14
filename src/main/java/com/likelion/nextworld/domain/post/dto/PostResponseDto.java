@@ -48,4 +48,6 @@ public class PostResponseDto {
 
   private LocalDateTime createdAt;
   private LocalDateTime updatedAt;
+
+  private Boolean hasPurchased;
 }
