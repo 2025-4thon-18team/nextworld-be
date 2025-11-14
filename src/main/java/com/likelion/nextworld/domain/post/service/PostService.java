@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.likelion.nextworld.domain.payment.repository.PayRepository;
 import com.likelion.nextworld.domain.post.dto.PostRequestDto;
 import com.likelion.nextworld.domain.post.dto.PostResponseDto;
 import com.likelion.nextworld.domain.post.entity.*;
@@ -31,6 +32,7 @@ public class PostService {
   private final TagRepository tagRepository;
   private final WorkGuidelineRepository workGuidelineRepository;
   private final AiCheckService aiCheckService;
+  private final PayRepository payRepository;
 
   // JWT 토큰에서 사용자 정보 추출
   private User getUserFromToken(String token) {
@@ -158,7 +160,7 @@ public class PostService {
       }
     }
 
-    return toPostResponseDto(saved);
+    return toPostResponseDto(saved); // hasPurchased는 기본 false 처리
   }
 
   // 임시저장
@@ -192,7 +194,7 @@ public class PostService {
     return toPostResponseDto(saved);
   }
 
-  // DTO 변환
+  // DTO 변환 (다른 곳에서 쓸 때)
   private PostResponseDto toDto(Post post) {
     return toPostResponseDto(post);
   }
@@ -393,20 +395,33 @@ public class PostService {
 
   // 포스트 상세 조회
   @Transactional
-  public PostResponseDto getPostById(Long id) {
+  public PostResponseDto getPostById(Long id, String token) {
     Post post =
         postRepository
             .findById(id)
             .orElseThrow(() -> new RuntimeException("해당 포스트를 찾을 수 없습니다. ID: " + id));
 
-    // 🔥 발행된 포스트만 조회 가능
+    // 발행된 포스트만 조회 가능
     if (post.getStatus() != WorkStatus.PUBLISHED) {
       throw new RuntimeException("발행된 포스트만 조회할 수 있습니다.");
     }
 
     increaseViewCount(post);
 
-    return toPostResponseDto(post);
+    User currentUser = null;
+    boolean hasPurchased = false; // ✅ 결제 여부 기본값
+
+    try {
+      currentUser = getUserFromToken(token);
+
+      if (post.getIsPaid()) {
+        hasPurchased = payRepository.existsByPayerAndPostId(currentUser, id); // ✅ 결제 여부 조회
+      }
+    } catch (Exception e) {
+      // 비회원·토큰없음 등은 그냥 무시
+    }
+
+    return toPostResponseDto(post, hasPurchased); // ✅ 수정: 결제 여부 반영
   }
 
   // 작품의 포스트 목록 조회
@@ -492,8 +507,13 @@ public class PostService {
         .toList();
   }
 
-  // Post 엔티티 → PostResponseDto 변환
+  // ✅ Post 엔티티 → PostResponseDto 변환 (기본: hasPurchased = false)
   public PostResponseDto toPostResponseDto(Post post) {
+    return toPostResponseDto(post, false); // 기본값 false
+  }
+
+  // ✅ 결제 여부까지 포함해서 DTO 변환
+  public PostResponseDto toPostResponseDto(Post post, boolean hasPurchased) {
     PostResponseDto dto =
         PostResponseDto.builder()
             .id(post.getId())
@@ -514,6 +534,7 @@ public class PostService {
             .aiCheck(post.getAiCheck())
             .createdAt(post.getCreatedAt())
             .updatedAt(post.getUpdatedAt())
+            .hasPurchased(hasPurchased) // ✅ 여기서 결제 여부 세팅
             .build();
 
     // PostStatistics 조회

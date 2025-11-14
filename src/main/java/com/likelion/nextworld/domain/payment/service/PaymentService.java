@@ -70,8 +70,15 @@ public class PaymentService {
   }
 
   @Transactional
-  public void use(UserPrincipal principal, UseRequest req) {
+  public PayItemResponse use(UserPrincipal principal, UseRequest req) {
     User payer = getUser(principal.getId());
+
+    if (req.getPostId() != null && req.getDerivativeWorkId() != null)
+      throw new IllegalArgumentException("postId와 derivativeWorkId는 동시에 보낼 수 없습니다.");
+
+    if (req.getPostId() == null && req.getDerivativeWorkId() == null)
+      throw new IllegalArgumentException("postId 또는 derivativeWorkId 중 하나는 반드시 필요합니다.");
+
     if (payer.getPointsBalance() < req.getAmount()) throw new IllegalStateException("포인트가 부족합니다.");
 
     payer.setPointsBalance(payer.getPointsBalance() - req.getAmount());
@@ -79,6 +86,15 @@ public class PaymentService {
     Pay pay = Pay.createUse(payer, req.getAmount(), req.getPostId(), req.getDerivativeWorkId());
 
     payRepository.save(pay);
+
+    return PayItemResponse.builder()
+        .payId(pay.getPayId())
+        .amount(pay.getAmount())
+        .type(pay.getType())
+        .status(pay.getStatus())
+        .impUid(pay.getImpUid())
+        .createdAt(pay.getCreatedAt())
+        .build();
   }
 
   @Transactional

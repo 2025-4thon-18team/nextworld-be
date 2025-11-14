@@ -55,8 +55,10 @@ public class PostController {
 
   @Operation(summary = "포스트 상세 조회", description = "포스트 ID로 상세 정보를 조회합니다.")
   @GetMapping("/{id}")
-  public ResponseEntity<BaseResponse<PostResponseDto>> getPostById(@PathVariable Long id) {
-    PostResponseDto response = postService.getPostById(id);
+  public ResponseEntity<BaseResponse<PostResponseDto>> getPostById(
+      @PathVariable Long id,
+      @RequestHeader(value = "Authorization", required = false) String token) {
+    PostResponseDto response = postService.getPostById(id, token);
     return ResponseEntity.ok(BaseResponse.success("포스트 상세 조회 완료", response));
   }
 

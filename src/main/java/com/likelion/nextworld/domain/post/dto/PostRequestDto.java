@@ -22,6 +22,7 @@ public class PostRequestDto {
   private CreationType creationType; // ORIGINAL, DERIVATIVE (NULL 가능)
 
   private Boolean isPaid;
+  private boolean hasPurchased;
   private Long price;
 
   // 태그 (PostTag로 저장)
