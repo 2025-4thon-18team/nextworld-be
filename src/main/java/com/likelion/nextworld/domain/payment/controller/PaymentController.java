@@ -4,18 +4,9 @@ import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import com.likelion.nextworld.domain.payment.dto.ChargeOptionsResponse;
-import com.likelion.nextworld.domain.payment.dto.ChargeRequest;
-import com.likelion.nextworld.domain.payment.dto.PaymentHistoryResponse;
-import com.likelion.nextworld.domain.payment.dto.RefundRequest;
-import com.likelion.nextworld.domain.payment.dto.UseRequest;
-import com.likelion.nextworld.domain.payment.dto.VerifyRequest;
+import com.likelion.nextworld.domain.payment.dto.*;
 import com.likelion.nextworld.domain.payment.service.PaymentService;
 import com.likelion.nextworld.domain.user.security.UserPrincipal;
 import com.likelion.nextworld.global.response.BaseResponse;
@@ -97,5 +88,21 @@ public class PaymentController {
     List<PaymentHistoryResponse> response = paymentService.getUseHistory(user);
 
     return ResponseEntity.ok(BaseResponse.success("사용 내역 조회 성공", response));
+  }
+
+  // 구매 작품 리스트
+  @GetMapping("/purchases/posts")
+  public ResponseEntity<?> getPurchasedPosts(@AuthenticationPrincipal UserPrincipal principal) {
+    return ResponseEntity.ok(paymentService.getPurchasedPosts(principal));
+  }
+
+  @GetMapping("/purchases/works")
+  public ResponseEntity<?> getPurchasedWorks(@AuthenticationPrincipal UserPrincipal principal) {
+    return ResponseEntity.ok(paymentService.getPurchasedWorks(principal));
+  }
+
+  @GetMapping("/purchases/all")
+  public ResponseEntity<?> getAllPurchases(@AuthenticationPrincipal UserPrincipal principal) {
+    return ResponseEntity.ok(paymentService.getAllPurchases(principal));
   }
 }

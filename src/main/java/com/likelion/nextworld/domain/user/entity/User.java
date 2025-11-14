@@ -18,7 +18,7 @@ public class User {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   @Column(name = "user_id")
-  private Long userId; // 사용자ID
+  private Long userId; // 사용자 ID
 
   @Column(nullable = false)
   private String name; // 이름
@@ -32,14 +32,15 @@ public class User {
   @Column(nullable = false)
   private String nickname; // 닉네임
 
+  @Column(name = "profile_image_url", columnDefinition = "TEXT")
+  private String profileImageUrl; // 프로필 이미지 URL
+
   @Column(name = "points_balance", nullable = false)
   private Long pointsBalance; // 현재 보유 포인트
 
-  @Column(name = "total_earned", nullable = false)
-  private Long totalEarned; // 누적 수익
-
-  @Column(columnDefinition = "TEXT")
-  private String guideline; // 가이드라인
+  @Builder.Default
+  @Column(name = "total_earned")
+  private Long totalEarned = 0L; // 총 수익
 
   @Column(name = "created_at", nullable = false)
   private LocalDateTime createdAt; // 가입일
@@ -47,14 +48,22 @@ public class User {
   @Column(name = "updated_at")
   private LocalDateTime updatedAt; // 수정일
 
-  private String profileImageUrl; // 프로필 이미지
-
   @Column(length = 200)
   private String bio; // 자기소개
 
   private String twitter; // 트위터 계정
 
   private String contactEmail; // 연락용 이메일
+
+  @PrePersist
+  protected void onCreate() {
+    this.createdAt = LocalDateTime.now();
+  }
+
+  @PreUpdate
+  protected void onUpdate() {
+    this.updatedAt = LocalDateTime.now();
+  }
 
   // 포인트 적립
   public void increasePoints(Long amount) {

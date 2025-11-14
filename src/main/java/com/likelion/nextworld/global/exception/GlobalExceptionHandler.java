@@ -1,5 +1,7 @@
 package com.likelion.nextworld.global.exception;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
@@ -36,6 +38,18 @@ public class GlobalExceptionHandler {
             .collect(Collectors.joining(" / "));
     log.warn("Validation 오류 발생: {}", errorMessages);
     return ResponseEntity.badRequest().body(BaseResponse.error(400, errorMessages));
+  }
+
+  @ExceptionHandler(GuidelineViolationException.class)
+  public ResponseEntity<?> handleGuidelineViolation(GuidelineViolationException ex) {
+
+    Map<String, Object> body = new HashMap<>();
+    body.put("success", false);
+    body.put("code", 400);
+    body.put("message", ex.getMessage());
+    body.put("data", null);
+
+    return ResponseEntity.badRequest().body(body);
   }
 
   // 예상치 못한 예외

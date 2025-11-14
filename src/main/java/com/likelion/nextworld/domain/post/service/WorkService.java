@@ -9,10 +9,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.likelion.nextworld.domain.post.dto.PostResponseDto;
+import com.likelion.nextworld.domain.post.dto.WorkGuidelineResponseDto;
 import com.likelion.nextworld.domain.post.dto.WorkRequestDto;
 import com.likelion.nextworld.domain.post.dto.WorkResponseDto;
-import com.likelion.nextworld.domain.post.entity.Work;
-import com.likelion.nextworld.domain.post.repository.WorkRepository;
+import com.likelion.nextworld.domain.post.entity.*;
+import com.likelion.nextworld.domain.post.repository.*;
 import com.likelion.nextworld.domain.user.entity.User;
 import com.likelion.nextworld.domain.user.repository.UserRepository;
 import com.likelion.nextworld.domain.user.security.JwtTokenProvider;
@@ -25,8 +26,14 @@ import lombok.RequiredArgsConstructor;
 public class WorkService {
 
   private final WorkRepository workRepository;
+  private final PostRepository postRepository;
   private final UserRepository userRepository;
   private final JwtTokenProvider jwtTokenProvider;
+  private final WorkGuidelineRepository workGuidelineRepository;
+  private final WorkStatisticsRepository workStatisticsRepository;
+  private final WorkTagRepository workTagRepository;
+  private final TagRepository tagRepository;
+  private final PostService postService;
   private final S3Uploader s3Uploader;
 
   // 이미지 업로드 전용
@@ -53,58 +60,151 @@ public class WorkService {
         .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
   }
 
-  // ✅ 1차 창작물 생성
+  // ✅ 작품 생성
   @Transactional
   public WorkResponseDto createWork(WorkRequestDto req, String token) {
-    if (token.startsWith("Bearer ")) token = token.substring(7);
-    if (!jwtTokenProvider.validateToken(token))
+    if (token.startsWith("Bearer ")) {
+      token = token.substring(7);
+    }
+
+    if (!jwtTokenProvider.validateToken(token)) {
       throw new RuntimeException("Invalid or expired token");
+    }
 
     Long userId = jwtTokenProvider.getUserIdFromToken(token);
     User author =
         userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
 
+    // workType 필수 검증
+    if (req.getWorkType() == null) {
+      throw new IllegalArgumentException("작품 타입(workType)은 필수입니다.");
+    }
+
+    // 2차 창작물인 경우 parentWorkId 필수 검증
+    if (req.getWorkType() == WorkTypeEnum.DERIVATIVE && req.getParentWorkId() == null) {
+      throw new IllegalArgumentException("2차 창작물인 경우 원작 작품 ID(parentWorkId)는 필수입니다.");
+    }
+
+    // 1차 창작물인 경우 parentWorkId는 NULL이어야 함
+    if (req.getWorkType() == WorkTypeEnum.ORIGINAL && req.getParentWorkId() != null) {
+      throw new IllegalArgumentException("1차 창작물인 경우 원작 작품 ID(parentWorkId)는 없어야 합니다.");
+    }
+
+    Work parentWork = null;
+    if (req.getParentWorkId() != null) {
+      parentWork =
+          workRepository
+              .findById(req.getParentWorkId())
+              .orElseThrow(() -> new RuntimeException("원작 작품을 찾을 수 없습니다."));
+    }
+
     Work work = new Work();
+    work.setWorkType(req.getWorkType());
+    work.setParentWork(parentWork);
     work.setTitle(req.getTitle());
     work.setDescription(req.getDescription());
     work.setCoverImageUrl(req.getCoverImageUrl());
-    work.setTags(req.getTags());
-    work.setUniverseDescription(req.getUniverseDescription());
-    work.setAllowDerivative(req.getAllowDerivative());
-    work.setGuidelineRelation(req.getGuidelineRelation());
-    work.setGuidelineContent(req.getGuidelineContent());
-    work.setGuidelineBackground(req.getGuidelineBackground());
-    work.setBannedWords(req.getBannedWords());
+    work.setCategory(req.getCategory());
+    work.setSerializationSchedule(req.getSerializationSchedule());
+    work.setAllowDerivative(req.getAllowDerivative() != null ? req.getAllowDerivative() : false);
+    work.setAuthor(author);
 
-    // ✅ 유료 여부와 금액
-    work.setIsPaid(req.getIsPaid());
-    if (Boolean.TRUE.equals(req.getIsPaid())) {
-      if (req.getPrice() == null || req.getPrice() <= 0) {
-        throw new RuntimeException("유료 작품은 금액을 반드시 입력해야 합니다.");
-      }
-      work.setPrice(req.getPrice());
-    } else {
-      work.setPrice(0L); // 무료는 0원으로 고정
+    Work savedWork = workRepository.save(work);
+
+    // WorkGuideline 생성
+    if (req.getGuidelineRelation() != null
+        || req.getGuidelineContent() != null
+        || req.getGuidelineBackground() != null
+        || req.getBannedWords() != null) {
+      WorkGuideline guideline =
+          WorkGuideline.builder()
+              .work(savedWork) // 이것만 넣으면 OK
+              .guidelineRelation(req.getGuidelineRelation())
+              .guidelineContent(req.getGuidelineContent())
+              .guidelineBackground(req.getGuidelineBackground())
+              .word(req.getBannedWords())
+              .build();
+      workGuidelineRepository.save(guideline);
     }
 
-    // ✅ 2차 창작물 수익 허용 여부
-    work.setAllowDerivativeProfit(req.getAllowDerivativeProfit());
+    // WorkStatistics 생성
+    WorkStatistics statistics =
+        WorkStatistics.builder()
+            .work(savedWork) // PK는 Hibernate가 자동으로 work.id로 채워줌
+            .totalLikesCount(0L)
+            .totalViewsCount(0L)
+            .build();
 
-    work.setAuthor(author);
-    workRepository.save(work);
+    workStatisticsRepository.save(statistics);
 
-    return new WorkResponseDto(work);
+    // WorkTag 생성
+    if (req.getTags() != null && !req.getTags().isEmpty()) {
+      for (String tagName : req.getTags()) {
+        if (tagName == null || tagName.trim().isEmpty()) {
+          continue;
+        }
+        Tag tag =
+            tagRepository
+                .findByName(tagName.trim())
+                .orElseGet(
+                    () -> {
+                      Tag newTag = new Tag();
+                      newTag.setName(tagName.trim());
+                      return tagRepository.save(newTag);
+                    });
+
+        WorkTag workTag = WorkTag.builder().work(savedWork).tag(tag).build();
+        workTagRepository.save(workTag);
+      }
+    }
+
+    return toWorkResponseDto(savedWork);
   }
 
-  // ✅ 특정 1차 창작물의 2차 작품 목록 조회
+  // ✅ 작품 목록 조회
+  @Transactional(readOnly = true)
+  public List<WorkResponseDto> getAllWorks(WorkTypeEnum workType) {
+    List<Work> works =
+        workType != null ? workRepository.findByWorkType(workType) : workRepository.findAll();
+
+    return works.stream().map(this::toWorkResponseDto).collect(Collectors.toList());
+  }
+
+  // ✅ 작품 상세 조회
+  @Transactional(readOnly = true)
+  public WorkResponseDto getWorkById(Long id) {
+    Work work =
+        workRepository
+            .findById(id)
+            .orElseThrow(() -> new RuntimeException("해당 작품을 찾을 수 없습니다. ID: " + id));
+
+    return toWorkResponseDto(work);
+  }
+
+  // ✅ 특정 작품의 회차 목록 조회
+  @Transactional(readOnly = true)
+  public List<PostResponseDto> getWorkEpisodes(Long workId) {
+    Work work =
+        workRepository
+            .findById(workId)
+            .orElseThrow(() -> new RuntimeException("해당 작품을 찾을 수 없습니다."));
+
+    return work.getEpisodes().stream()
+        .map(post -> postService.toPostResponseDto(post))
+        .collect(Collectors.toList());
+  }
+
+  // ✅ 특정 작품의 원작 참조 포스트 목록 조회
+  @Transactional(readOnly = true)
   public List<PostResponseDto> getDerivativePosts(Long workId) {
     Work work =
         workRepository
             .findById(workId)
             .orElseThrow(() -> new RuntimeException("해당 원작을 찾을 수 없습니다."));
 
-    return work.getDerivativePosts().stream()
-        .map(PostResponseDto::new)
+    // parentWork가 현재 작품인 포스트들을 조회
+    return postRepository.findByParentWork(work).stream()
+        .map(post -> postService.toPostResponseDto(post))
         .collect(Collectors.toList());
   }
 
@@ -122,5 +222,63 @@ public class WorkService {
     }
 
     workRepository.delete(work);
+  }
+
+  // Work 엔티티 → WorkResponseDto 변환
+  public WorkResponseDto toWorkResponseDto(Work work) {
+    WorkResponseDto dto = new WorkResponseDto();
+    dto.setId(work.getId());
+    dto.setWorkType(work.getWorkType());
+    dto.setTitle(work.getTitle());
+    dto.setDescription(work.getDescription());
+    dto.setCoverImageUrl(work.getCoverImageUrl());
+    dto.setCategory(work.getCategory());
+    dto.setSerializationSchedule(work.getSerializationSchedule());
+    dto.setAllowDerivative(work.getAllowDerivative());
+    dto.setAuthorName(work.getAuthor() != null ? work.getAuthor().getNickname() : null);
+    dto.setParentWorkId(work.getParentWork() != null ? work.getParentWork().getId() : null);
+    dto.setParentWorkTitle(work.getParentWork() != null ? work.getParentWork().getTitle() : null);
+
+    // WorkStatistics 조회
+    workStatisticsRepository
+        .findById(work.getId())
+        .ifPresent(
+            statistics -> {
+              dto.setTotalLikesCount(statistics.getTotalLikesCount());
+              dto.setTotalViewsCount(statistics.getTotalViewsCount());
+              dto.setTotalRating(statistics.getTotalRating());
+            });
+
+    // WorkTag 조회
+    List<String> tagNames =
+        workTagRepository.findByWork(work).stream()
+            .map(wt -> wt.getTag().getName())
+            .collect(Collectors.toList());
+    dto.setTags(tagNames);
+
+    return dto;
+  }
+
+  // 작품 가이드라인 조회
+  @Transactional(readOnly = true)
+  public WorkGuidelineResponseDto getWorkGuideline(Long workId) {
+    Work work =
+        workRepository
+            .findById(workId)
+            .orElseThrow(() -> new RuntimeException("해당 작품을 찾을 수 없습니다. ID: " + workId));
+
+    return workGuidelineRepository
+        .findById(workId)
+        .map(
+            guideline ->
+                WorkGuidelineResponseDto.builder()
+                    .workId(work.getId())
+                    .workTitle(work.getTitle())
+                    .guidelineRelation(guideline.getGuidelineRelation())
+                    .guidelineContent(guideline.getGuidelineContent())
+                    .guidelineBackground(guideline.getGuidelineBackground())
+                    .bannedWords(guideline.getWord())
+                    .build())
+        .orElseThrow(() -> new RuntimeException("해당 작품의 가이드라인을 찾을 수 없습니다."));
   }
 }

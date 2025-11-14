@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.likelion.nextworld.domain.post.entity.Work;
+import com.likelion.nextworld.domain.post.entity.WorkTypeEnum;
 import com.likelion.nextworld.domain.user.entity.User;
 
 public interface WorkRepository extends JpaRepository<Work, Long> {
@@ -24,4 +25,10 @@ public interface WorkRepository extends JpaRepository<Work, Long> {
       String titleKeyword, String descriptionKeyword);
 
   List<Work> findAllByOrderByIdDesc();
+
+  // workType으로 필터링
+  List<Work> findByWorkType(WorkTypeEnum workType);
+
+  // parentWorkId로 검색 (2차 창작물)
+  List<Work> findByParentWorkId(Long parentWorkId);
 }

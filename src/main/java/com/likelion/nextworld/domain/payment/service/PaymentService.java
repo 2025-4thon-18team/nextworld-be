@@ -1,5 +1,7 @@
 package com.likelion.nextworld.domain.payment.service;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -10,6 +12,10 @@ import com.likelion.nextworld.domain.payment.entity.Pay;
 import com.likelion.nextworld.domain.payment.entity.PayStatus;
 import com.likelion.nextworld.domain.payment.entity.TransactionType;
 import com.likelion.nextworld.domain.payment.repository.PayRepository;
+import com.likelion.nextworld.domain.post.entity.Post;
+import com.likelion.nextworld.domain.post.entity.Work;
+import com.likelion.nextworld.domain.post.repository.PostRepository;
+import com.likelion.nextworld.domain.post.repository.WorkRepository;
 import com.likelion.nextworld.domain.user.entity.User;
 import com.likelion.nextworld.domain.user.repository.UserRepository;
 import com.likelion.nextworld.domain.user.security.UserPrincipal;
@@ -21,6 +27,8 @@ import lombok.RequiredArgsConstructor;
 public class PaymentService {
   private final PayRepository payRepository;
   private final UserRepository userRepository;
+  private final WorkRepository workRepository;
+  private final PostRepository postRepository;
   private final PortOneClient portOneClient;
 
   @Transactional
@@ -34,14 +42,8 @@ public class PaymentService {
               throw new IllegalStateException("이미 처리된 결제입니다.");
             });
 
-    Pay pay =
-        Pay.builder()
-            .payer(payer)
-            .amount(req.getAmount())
-            .transactionType(TransactionType.CHARGE)
-            .payStatus(PayStatus.PENDING)
-            .impUid(req.getImpUid())
-            .build();
+    Pay pay = Pay.createCharge(payer, req.getAmount(), req.getImpUid());
+
     payRepository.save(pay);
   }
 
@@ -62,7 +64,7 @@ public class PaymentService {
     if (!paidAmount.equals(pay.getAmount())) throw new IllegalStateException("금액 불일치");
 
     payer.setPointsBalance(payer.getPointsBalance() + paidAmount);
-    pay.setPayStatus(PayStatus.COMPLETED);
+    pay.setStatus(PayStatus.COMPLETED);
 
     return true;
   }
@@ -73,16 +75,8 @@ public class PaymentService {
     if (payer.getPointsBalance() < req.getAmount()) throw new IllegalStateException("포인트가 부족합니다.");
 
     payer.setPointsBalance(payer.getPointsBalance() - req.getAmount());
-    User author = (req.getAuthorId() != null) ? getUser(req.getAuthorId()) : null;
 
-    Pay pay =
-        Pay.builder()
-            .payer(payer)
-            .author(author)
-            .amount(req.getAmount())
-            .transactionType(TransactionType.USE)
-            .payStatus(PayStatus.COMPLETED)
-            .build();
+    Pay pay = Pay.createUse(payer, req.getAmount(), req.getPostId(), req.getDerivativeWorkId());
 
     payRepository.save(pay);
   }
@@ -94,7 +88,7 @@ public class PaymentService {
             .findByImpUid(request.getImpUid())
             .orElseThrow(() -> new IllegalArgumentException("결제 내역을 찾을 수 없습니다."));
 
-    if (pay.getPayStatus() != PayStatus.COMPLETED)
+    if (pay.getStatus() != PayStatus.COMPLETED)
       throw new IllegalStateException("환불 요청은 결제 완료 상태에서만 가능합니다.");
 
     pay.setStatus(PayStatus.REFUND_REQUESTED);
@@ -109,8 +103,8 @@ public class PaymentService {
                 PayItemResponse.builder()
                     .payId(p.getPayId())
                     .amount(p.getAmount())
-                    .type(p.getTransactionType())
-                    .status(p.getPayStatus())
+                    .type(p.getType())
+                    .status(p.getStatus())
                     .impUid(p.getImpUid())
                     .createdAt(p.getCreatedAt())
                     .build())
@@ -148,8 +142,7 @@ public class PaymentService {
             .orElseThrow(() -> new IllegalArgumentException("사용자 없음"));
 
     List<Pay> payments =
-        payRepository.findByPayerAndTransactionTypeOrderByCreatedAtDesc(
-            user, TransactionType.CHARGE);
+        payRepository.findByPayerAndTypeOrderByCreatedAtDesc(user, TransactionType.CHARGE);
 
     return payments.stream()
         .map(
@@ -171,17 +164,85 @@ public class PaymentService {
             .orElseThrow(() -> new IllegalArgumentException("사용자 없음"));
 
     List<Pay> payments =
-        payRepository.findByPayerAndTransactionTypeOrderByCreatedAtDesc(user, TransactionType.USE);
+        payRepository.findByPayerAndTypeOrderByCreatedAtDesc(user, TransactionType.USE);
 
     return payments.stream()
         .map(
             p ->
                 PaymentHistoryResponse.builder()
-                    .title(p.getPost() != null ? p.getPost().getTitle() : "알 수 없는 포스트")
-                    .opponentName(p.getAuthor() != null ? p.getAuthor().getNickname() : null)
+                    .title("포인트 사용")
+                    .opponentName(null)
                     .amount(-p.getAmount())
                     .date(p.getCreatedAt())
                     .build())
         .toList();
+  }
+
+  @Transactional(readOnly = true)
+  public List<PurchasedWorkResponse> getPurchasedPosts(UserPrincipal principal) {
+    User user = getUser(principal.getId());
+
+    List<Pay> purchases =
+        payRepository.findByPayerAndTypeAndPostIdIsNotNullOrderByCreatedAtDesc(
+            user, TransactionType.USE);
+
+    return purchases.stream()
+        .map(
+            p -> {
+              Post post = postRepository.findById(p.getPostId()).orElse(null);
+
+              return PurchasedWorkResponse.builder()
+                  .postId(p.getPostId())
+                  .workId(post != null && post.getWork() != null ? post.getWork().getId() : null)
+                  .title(post != null ? post.getTitle() : null)
+                  .amount(p.getAmount())
+                  .purchasedAt(p.getCreatedAt())
+                  .build();
+            })
+        .toList();
+  }
+
+  @Transactional(readOnly = true)
+  public List<PurchasedWorkResponse> getPurchasedWorks(UserPrincipal principal) {
+    User user = getUser(principal.getId());
+
+    List<Pay> purchases =
+        payRepository.findByPayerAndTypeAndWorkIdIsNotNullOrderByCreatedAtDesc(
+            user, TransactionType.USE);
+
+    return purchases.stream()
+        .map(
+            p -> {
+              Work work = workRepository.findById(p.getWorkId()).orElse(null);
+
+              return PurchasedWorkResponse.builder()
+                  .postId(null)
+                  .workId(p.getWorkId())
+                  .title(work != null ? work.getTitle() : null)
+                  .coverImageUrl(work != null ? work.getCoverImageUrl() : null)
+                  .workType(work != null ? work.getWorkType().name() : null)
+                  .parentWorkId(
+                      work != null && work.getParentWork() != null
+                          ? work.getParentWork().getId()
+                          : null)
+                  .amount(p.getAmount())
+                  .purchasedAt(p.getCreatedAt())
+                  .build();
+            })
+        .toList();
+  }
+
+  @Transactional(readOnly = true)
+  public List<PurchasedWorkResponse> getAllPurchases(UserPrincipal principal) {
+    List<PurchasedWorkResponse> posts = getPurchasedPosts(principal);
+    List<PurchasedWorkResponse> works = getPurchasedWorks(principal);
+
+    List<PurchasedWorkResponse> all = new ArrayList<>();
+    all.addAll(posts);
+    all.addAll(works);
+
+    all.sort(Comparator.comparing(PurchasedWorkResponse::getPurchasedAt).reversed());
+
+    return all;
   }
 }

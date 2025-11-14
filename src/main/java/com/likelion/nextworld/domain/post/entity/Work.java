@@ -1,5 +1,6 @@
 package com.likelion.nextworld.domain.post.entity;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,54 +18,70 @@ import lombok.ToString;
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString(exclude = "derivativePosts") // ✅ 무한루프 방지
+@ToString(exclude = {"episodes"}) // ✅ 무한루프 방지
 public class Work {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
+  // 작품 타입 (1차/2차)
+  @Enumerated(EnumType.STRING)
+  @Column(name = "work_type", nullable = false)
+  private WorkTypeEnum workType; // ORIGINAL, DERIVATIVE
+
+  // 원작 작품 참조 (2차 창작물인 경우)
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "parent_work_id")
+  private Work parentWork; // 원작 작품 (DERIVATIVE인 경우)
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "author_id", nullable = false)
+  private User author;
+
   // 1. 기본 정보
   private String title;
   private String description;
   private String coverImageUrl;
 
-  @ElementCollection private List<String> tags = new ArrayList<>();
+  // 카테고리
+  private String category;
 
-  // 2. 세계관 설정
-  @Column(columnDefinition = "TEXT")
-  private String universeDescription;
+  @Column(name = "serialization_schedule", columnDefinition = "TEXT")
+  private String serializationSchedule; // 연재 일정
 
-  // 3. 2차 창작 관련
-  private Boolean allowDerivative;
+  // 4. 2차 창작 관련
+  @Column(name = "allow_derivative", nullable = false)
+  private Boolean allowDerivative = false;
 
-  @Column(columnDefinition = "TEXT")
-  private String guidelineRelation;
+  // 타임스탬프
+  @Column(name = "created_at", nullable = true)
+  private LocalDateTime createdAt;
 
-  @Column(columnDefinition = "TEXT")
-  private String guidelineContent;
+  @Column(name = "updated_at")
+  private LocalDateTime updatedAt;
 
-  @Column(columnDefinition = "TEXT")
-  private String guidelineBackground;
+  @OneToMany(mappedBy = "work", cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<WorkTag> tags = new ArrayList<>();
 
-  @ElementCollection private List<String> bannedWords = new ArrayList<>();
+  @PrePersist
+  public void onCreate() {
+    this.createdAt = LocalDateTime.now();
+    this.updatedAt = LocalDateTime.now();
+  }
 
-  // 4. 수익 관련
-  private Boolean isPaid;
-  private Long price; // 금액
-  private Boolean allowDerivativeProfit;
+  @PreUpdate
+  public void onUpdate() {
+    this.updatedAt = LocalDateTime.now();
+  }
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "author_id")
-  private User author;
-
-  //  2차 창작물(Post) 연결
-  @OneToMany(mappedBy = "parentWork", cascade = CascadeType.ALL, orphanRemoval = true)
-  private List<Post> derivativePosts = new ArrayList<>();
+  // 작품의 회차 (work_id로 연결된 Post들)
+  @OneToMany(mappedBy = "work", cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<Post> episodes = new ArrayList<>();
 
   // 양방향 편의 메서드
-  public void addDerivativePost(Post post) {
-    derivativePosts.add(post);
-    post.setParentWork(this);
+  public void addEpisode(Post post) {
+    episodes.add(post);
+    post.setWork(this);
   }
 }

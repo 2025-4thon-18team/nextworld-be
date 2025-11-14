@@ -2,6 +2,8 @@ package com.likelion.nextworld.global.ai;
 
 import java.util.Map;
 
+import jakarta.annotation.PostConstruct;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -48,5 +50,10 @@ public class OpenAiClient {
     } catch (Exception e) {
       return "ERROR";
     }
+  }
+
+  @PostConstruct
+  public void testKey() {
+    System.out.println("🔥 Loaded OPENAI KEY = " + apiKey);
   }
 }

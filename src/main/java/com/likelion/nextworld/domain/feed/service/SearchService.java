@@ -11,6 +11,8 @@ import com.likelion.nextworld.domain.post.dto.PostResponseDto;
 import com.likelion.nextworld.domain.post.dto.WorkResponseDto;
 import com.likelion.nextworld.domain.post.entity.Post;
 import com.likelion.nextworld.domain.post.entity.Work;
+import com.likelion.nextworld.domain.post.mapper.PostMapper;
+import com.likelion.nextworld.domain.post.mapper.WorkMapper;
 import com.likelion.nextworld.domain.post.repository.PostRepository;
 import com.likelion.nextworld.domain.post.repository.WorkRepository;
 
@@ -23,6 +25,8 @@ public class SearchService {
 
   private final WorkRepository workRepository;
   private final PostRepository postRepository;
+  private final WorkMapper workMapper;
+  private final PostMapper postMapper;
 
   public ListResponse search(String keyword) {
     if (keyword == null || keyword.trim().isEmpty()) {
@@ -39,13 +43,13 @@ public class SearchService {
     List<Work> works =
         workRepository.findByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCase(q, q);
 
-    List<WorkResponseDto> workDtos = works.stream().map(WorkResponseDto::new).toList();
+    List<WorkResponseDto> workDtos = works.stream().map(workMapper::toDto).toList();
 
     // 2) Post 검색 (제목 + 내용 기준)
     List<Post> posts =
         postRepository.findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(q, q);
 
-    List<PostResponseDto> postDtos = posts.stream().map(PostResponseDto::new).toList();
+    List<PostResponseDto> postDtos = posts.stream().map(postMapper::toDto).toList();
 
     return ListResponse.builder().works(workDtos).posts(postDtos).build();
   }

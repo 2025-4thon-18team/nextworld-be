@@ -16,6 +16,8 @@ import com.likelion.nextworld.domain.post.dto.PostResponseDto;
 import com.likelion.nextworld.domain.post.dto.WorkResponseDto;
 import com.likelion.nextworld.domain.post.entity.Post;
 import com.likelion.nextworld.domain.post.entity.Work;
+import com.likelion.nextworld.domain.post.mapper.PostMapper;
+import com.likelion.nextworld.domain.post.mapper.WorkMapper;
 import com.likelion.nextworld.domain.post.repository.PostRepository;
 import com.likelion.nextworld.domain.post.repository.WorkRepository;
 import com.likelion.nextworld.domain.user.entity.User;
@@ -36,6 +38,8 @@ public class MyPageService {
   private final S3Uploader s3Uploader;
   private final PostRepository postRepository;
   private final WorkRepository workRepository;
+  private final WorkMapper workMapper;
+  private final PostMapper postMapper;
 
   private User getCurrentUser(UserPrincipal principal) {
     if (principal == null || principal.getId() == null) {
@@ -100,7 +104,7 @@ public class MyPageService {
 
     List<Work> works = workRepository.findAllByAuthor(user);
 
-    return works.stream().map(WorkResponseDto::new).toList();
+    return workMapper.toDtoList(works);
   }
 
   @Transactional(readOnly = true)
@@ -109,6 +113,6 @@ public class MyPageService {
 
     List<Post> posts = postRepository.findAllByAuthorOrderByCreatedAtDesc(user);
 
-    return posts.stream().map(PostResponseDto::new).toList();
+    return postMapper.toDtoList(posts);
   }
 }
