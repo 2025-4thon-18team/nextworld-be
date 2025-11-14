@@ -6,6 +6,7 @@ import java.util.List;
 import com.likelion.nextworld.domain.post.entity.WorkTypeEnum;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -14,7 +15,9 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class WorkResponseDto {
+
   private Long id;
   private WorkTypeEnum workType;
 

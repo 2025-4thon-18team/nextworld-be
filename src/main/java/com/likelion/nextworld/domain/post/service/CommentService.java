@@ -96,7 +96,7 @@ public class CommentService {
             .findById(postId)
             .orElseThrow(() -> new CustomException(WorkErrorCode.WORK_NOT_FOUND));
 
-    List<Comment> comments = commentRepository.findAllByPostOrderByCreatedAtDesc(post);
+    List<Comment> comments = commentRepository.findAllByPostOrderByIdAsc(post);
     return commentMapper.toResponseList(comments);
   }
 

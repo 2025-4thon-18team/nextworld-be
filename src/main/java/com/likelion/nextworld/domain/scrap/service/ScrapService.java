@@ -2,13 +2,16 @@ package com.likelion.nextworld.domain.scrap.service;
 
 import java.util.List;
 
-import jakarta.transaction.Transactional;
-
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.likelion.nextworld.domain.post.dto.PostResponseDto;
+import com.likelion.nextworld.domain.post.dto.WorkResponseDto;
 import com.likelion.nextworld.domain.post.entity.Post;
 import com.likelion.nextworld.domain.post.entity.Work;
 import com.likelion.nextworld.domain.post.exception.WorkErrorCode;
+import com.likelion.nextworld.domain.post.mapper.PostMapper;
+import com.likelion.nextworld.domain.post.mapper.WorkMapper;
 import com.likelion.nextworld.domain.post.repository.PostRepository;
 import com.likelion.nextworld.domain.post.repository.WorkRepository;
 import com.likelion.nextworld.domain.scrap.dto.ScrapResponse;
@@ -34,6 +37,8 @@ public class ScrapService {
   private final UserRepository userRepository;
   private final WorkRepository workRepository;
   private final PostRepository postRepository;
+  private final WorkMapper workMapper;
+  private final PostMapper postMapper;
 
   private User getCurrentUser(UserPrincipal principal) {
     if (principal == null || principal.getId() == null) {
@@ -114,5 +119,21 @@ public class ScrapService {
   public List<Scrap> getMyScrapEntities(UserPrincipal principal) {
     User user = getCurrentUser(principal);
     return scrapRepository.findAllByUser(user);
+  }
+
+  @Transactional(readOnly = true)
+  public List<WorkResponseDto> getMyWorkScraps(UserPrincipal principal) {
+    User user = getCurrentUser(principal);
+    List<Scrap> scraps = scrapRepository.findAllByUserAndWorkIsNotNullOrderByCreatedAtDesc(user);
+
+    return scraps.stream().map(Scrap::getWork).distinct().map(workMapper::toDto).toList();
+  }
+
+  @Transactional(readOnly = true)
+  public List<PostResponseDto> getMyPostScraps(UserPrincipal principal) {
+    User user = getCurrentUser(principal);
+    List<Scrap> scraps = scrapRepository.findAllByUserAndPostIsNotNullOrderByCreatedAtDesc(user);
+
+    return scraps.stream().map(Scrap::getPost).distinct().map(postMapper::toDto).toList();
   }
 }

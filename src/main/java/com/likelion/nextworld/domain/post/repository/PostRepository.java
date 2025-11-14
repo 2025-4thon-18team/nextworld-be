@@ -19,6 +19,13 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
   Optional<Post> findByIdAndAuthorAndStatus(Long id, User author, WorkStatus status);
 
+  List<Post> findAllByAuthorOrderByCreatedAtDesc(User author);
+
+  List<Post> findByTitleContainingIgnoreCaseOrContentContainingIgnoreCase(
+      String titleKeyword, String contentKeyword);
+
+  List<Post> findAllByOrderByCreatedAtDesc();
+
   // 작품의 회차 목록
   List<Post> findByWorkOrderByEpisodeNumberAsc(Work work);
 
