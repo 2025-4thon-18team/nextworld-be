@@ -1,8 +1,6 @@
 package com.likelion.nextworld.domain.post.dto;
 
-import java.util.List;
-
-import com.likelion.nextworld.domain.post.entity.WorkGenre;
+import com.likelion.nextworld.domain.post.entity.WorkTypeEnum;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -10,21 +8,26 @@ import lombok.Setter;
 @Getter
 @Setter
 public class WorkRequestDto {
+  private WorkTypeEnum workType; // 필수: ORIGINAL, DERIVATIVE
+
+  private Long parentWorkId; // 원작 작품 ID (DERIVATIVE인 경우 필수)
+
   private String title;
   private String description;
   private String coverImageUrl;
-  private List<String> tags;
-  private WorkGenre genre;
 
-  private String universeDescription;
+  private String category;
+
+  private String serializationSchedule; // 연재 일정
 
   private Boolean allowDerivative;
+
+  // 가이드라인 및 금지어 (WorkGuideline으로 저장)
   private String guidelineRelation;
   private String guidelineContent;
   private String guidelineBackground;
-  private List<String> bannedWords;
+  private String bannedWords; // 금지어
 
-  private Boolean isPaid;
-  private Long price; // 금액
-  private Boolean allowDerivativeProfit;
+  // 태그 (WorkTag로 저장)
+  private java.util.List<String> tags; // 태그 이름 리스트
 }

@@ -15,7 +15,13 @@ public interface PayRepository extends JpaRepository<Pay, Long> {
 
   Optional<Pay> findByImpUid(String impUid);
 
-  List<Pay> findByPayerAndTransactionTypeOrderByCreatedAtDesc(User payer, TransactionType type);
+  List<Pay> findByPayerAndTypeOrderByCreatedAtDesc(User payer, TransactionType type);
 
-  List<Pay> findByPayStatus(PayStatus status);
+  List<Pay> findByStatus(PayStatus status);
+
+  List<Pay> findByPayerAndTypeAndPostIdIsNotNullOrderByCreatedAtDesc(
+      User payer, TransactionType type);
+
+  List<Pay> findByPayerAndTypeAndWorkIdIsNotNullOrderByCreatedAtDesc(
+      User payer, TransactionType type);
 }

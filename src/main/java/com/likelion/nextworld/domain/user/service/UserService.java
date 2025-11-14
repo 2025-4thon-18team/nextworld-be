@@ -46,7 +46,6 @@ public class UserService {
             .email(request.getEmail())
             .password(encodedPassword)
             .pointsBalance(0L)
-            .totalEarned(0L)
             .createdAt(LocalDateTime.now())
             .build();
 
@@ -121,8 +120,13 @@ public class UserService {
     if (request.getNickname() != null && !request.getNickname().isBlank()) {
       user.setNickname(request.getNickname());
     }
-    if (request.getGuideline() != null) {
-      user.setGuideline(request.getGuideline());
+
+    if (request.getName() != null && !request.getName().isBlank()) {
+      user.setName(request.getName());
+    }
+
+    if (request.getProfileImageUrl() != null) {
+      user.setProfileImageUrl(request.getProfileImageUrl());
     }
 
     user.setUpdatedAt(LocalDateTime.now());

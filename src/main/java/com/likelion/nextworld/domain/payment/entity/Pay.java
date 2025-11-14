@@ -4,45 +4,51 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.*;
 
-import com.likelion.nextworld.domain.post.entity.Post;
 import com.likelion.nextworld.domain.user.entity.User;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @Setter
-@Builder
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
+@Table(name = "pay")
 public class Pay {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @Column(name = "pay_id")
   private Long payId;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "payer_id", nullable = false)
+  @JoinColumn(name = "user_id", nullable = false)
   private User payer;
-
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "author_id")
-  private User author;
 
   @Column(nullable = false)
   private Long amount;
 
   @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  private TransactionType transactionType; // CHARGE/USE/REFUND
+  @Column(name = "type", nullable = false)
+  private TransactionType type; // CHARGE/USE/REFUND
 
   @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  private PayStatus payStatus; // PENDING/COMPLETED/FAILED
+  @Column(name = "status", nullable = false)
+  private PayStatus status; // PENDING/COMPLETED/FAILED/REFUND_REQUESTED/REFUNDED
 
-  @Column(unique = true)
+  @Column(name = "imp_uid")
   private String impUid;
 
+  @Column(name = "created_at", nullable = false)
   private LocalDateTime createdAt;
+
+  @Column(name = "post_id")
+  private Long postId;
+
+  @Column(name = "work_id")
+  private Long workId;
 
   @PrePersist
   void prePersist() {
@@ -50,10 +56,29 @@ public class Pay {
   }
 
   public void setStatus(PayStatus status) {
-    this.payStatus = status;
+    this.status = status;
   }
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "post_id")
-  private Post post;
+  public static Pay createCharge(User payer, Long amount, String impUid) {
+    Pay pay = new Pay();
+    pay.payer = payer;
+    pay.amount = amount;
+    pay.type = TransactionType.CHARGE;
+    pay.status = PayStatus.PENDING;
+    pay.impUid = impUid;
+    pay.createdAt = LocalDateTime.now();
+    return pay;
+  }
+
+  public static Pay createUse(User payer, Long amount, Long postId, Long workId) {
+    Pay pay = new Pay();
+    pay.payer = payer;
+    pay.amount = amount;
+    pay.type = TransactionType.USE;
+    pay.status = PayStatus.COMPLETED;
+    pay.postId = postId;
+    pay.workId = workId;
+    pay.createdAt = LocalDateTime.now();
+    return pay;
+  }
 }
