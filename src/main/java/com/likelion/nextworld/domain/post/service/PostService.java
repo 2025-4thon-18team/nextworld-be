@@ -392,7 +392,7 @@ public class PostService {
   }
 
   // 포스트 상세 조회
-  @Transactional(readOnly = true)
+  @Transactional
   public PostResponseDto getPostById(Long id) {
     Post post =
         postRepository
@@ -403,6 +403,8 @@ public class PostService {
     if (post.getStatus() != WorkStatus.PUBLISHED) {
       throw new RuntimeException("발행된 포스트만 조회할 수 있습니다.");
     }
+
+    increaseViewCount(post);
 
     return toPostResponseDto(post);
   }
@@ -532,5 +534,26 @@ public class PostService {
     dto.setTags(tagNames);
 
     return dto;
+  }
+
+  private void increaseViewCount(Post post) {
+
+    if (!((post.getPostType() == PostType.POST || post.getPostType() == PostType.EPISODE)
+        && post.getStatus() == WorkStatus.PUBLISHED)) {
+      return;
+    }
+
+    PostStatistics statistics =
+        postStatisticsRepository
+            .findByPost(post)
+            .orElseGet(
+                () -> {
+                  PostStatistics ps =
+                      PostStatistics.builder().post(post).viewsCount(0L).commentsCount(0L).build();
+                  return postStatisticsRepository.save(ps);
+                });
+
+    statistics.setViewsCount(statistics.getViewsCount() + 1);
+    statistics.setUpdatedAt(java.time.LocalDateTime.now());
   }
 }
