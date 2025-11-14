@@ -8,25 +8,43 @@ import org.springframework.stereotype.Component;
 import com.likelion.nextworld.domain.post.dto.WorkResponseDto;
 import com.likelion.nextworld.domain.post.entity.Work;
 import com.likelion.nextworld.domain.post.entity.WorkTag;
+import com.likelion.nextworld.domain.post.repository.WorkStatisticsRepository;
+
+import lombok.RequiredArgsConstructor;
 
 @Component
+@RequiredArgsConstructor
 public class WorkMapper {
+
+  private final WorkStatisticsRepository workStatisticsRepository;
 
   public WorkResponseDto toDto(Work work) {
     if (work == null) {
       return null;
     }
 
-    // 태그 문자열 리스트로 변환 (WorkTag -> Tag -> name)
+    // 태그
     List<String> tags =
         work.getTags() != null
             ? work.getTags().stream().map(WorkTag::getTag).map(tag -> tag.getName()).toList()
             : List.of();
 
-    // 통계 필드는 아직 Work 엔티티에 없으니까 기본값/NULL로 세팅
-    Long totalLikesCount = 0L;
-    Long totalViewsCount = 0L;
-    BigDecimal totalRating = BigDecimal.ZERO;
+    var statsOpt = workStatisticsRepository.findByWork(work);
+    Long totalLikesCount = null;
+    Long totalViewsCount = null;
+    BigDecimal totalRating = null;
+
+    if (statsOpt.isPresent()) {
+      var stats = statsOpt.get();
+      totalLikesCount = stats.getTotalLikesCount() != null ? stats.getTotalLikesCount() : 0L;
+      totalViewsCount = stats.getTotalViewsCount() != null ? stats.getTotalViewsCount() : 0L;
+      totalRating = stats.getTotalRating(); // 상세 조회처럼 null 유지
+    } else {
+      // 통계 레코드가 없으면 기본값
+      totalLikesCount = 0L;
+      totalViewsCount = 0L;
+      totalRating = null;
+    }
 
     return WorkResponseDto.builder()
         .id(work.getId())
