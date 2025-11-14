@@ -39,7 +39,9 @@ public class SecurityConfig {
                         "/api/auth/**",
                         "/api/search",
                         "/api/feed/**",
-                        "/api/posts/{post_id}/comments")
+                        "/api/posts/{post_id}/comments",
+                        "/api/posts",
+                        "/api/posts/{id}")
                     .permitAll()
                     // ✅ 나머지는 JWT 인증 필요
                     .anyRequest()
