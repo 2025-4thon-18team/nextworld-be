@@ -9,8 +9,21 @@ import org.springframework.transaction.annotation.Transactional;
 import com.likelion.nextworld.domain.payment.repository.PayRepository;
 import com.likelion.nextworld.domain.post.dto.PostRequestDto;
 import com.likelion.nextworld.domain.post.dto.PostResponseDto;
-import com.likelion.nextworld.domain.post.entity.*;
-import com.likelion.nextworld.domain.post.repository.*;
+import com.likelion.nextworld.domain.post.entity.Post;
+import com.likelion.nextworld.domain.post.entity.PostStatistics;
+import com.likelion.nextworld.domain.post.entity.PostTag;
+import com.likelion.nextworld.domain.post.entity.PostType;
+import com.likelion.nextworld.domain.post.entity.Tag;
+import com.likelion.nextworld.domain.post.entity.Work;
+import com.likelion.nextworld.domain.post.entity.WorkGuideline;
+import com.likelion.nextworld.domain.post.entity.WorkStatus;
+import com.likelion.nextworld.domain.post.mapper.PostMapper;
+import com.likelion.nextworld.domain.post.repository.PostRepository;
+import com.likelion.nextworld.domain.post.repository.PostStatisticsRepository;
+import com.likelion.nextworld.domain.post.repository.PostTagRepository;
+import com.likelion.nextworld.domain.post.repository.TagRepository;
+import com.likelion.nextworld.domain.post.repository.WorkGuidelineRepository;
+import com.likelion.nextworld.domain.post.repository.WorkRepository;
 import com.likelion.nextworld.domain.user.entity.User;
 import com.likelion.nextworld.domain.user.repository.UserRepository;
 import com.likelion.nextworld.domain.user.security.JwtTokenProvider;
@@ -33,6 +46,7 @@ public class PostService {
   private final WorkGuidelineRepository workGuidelineRepository;
   private final AiCheckService aiCheckService;
   private final PayRepository payRepository;
+  private final PostMapper postMapper;
 
   // JWT 토큰에서 사용자 정보 추출
   private User getUserFromToken(String token) {
@@ -369,10 +383,18 @@ public class PostService {
             .orElseThrow(() -> new RuntimeException("본인의 임시저장 글이 아니거나 존재하지 않습니다."));
 
     // 수정 가능한 필드만 업데이트
-    if (request.getTitle() != null) draft.setTitle(request.getTitle());
-    if (request.getContent() != null) draft.setContent(request.getContent());
-    if (request.getHasImage() != null) draft.setHasImage(request.getHasImage());
-    if (request.getCreationType() != null) draft.setCreationType(request.getCreationType());
+    if (request.getTitle() != null) {
+      draft.setTitle(request.getTitle());
+    }
+    if (request.getContent() != null) {
+      draft.setContent(request.getContent());
+    }
+    if (request.getHasImage() != null) {
+      draft.setHasImage(request.getHasImage());
+    }
+    if (request.getCreationType() != null) {
+      draft.setCreationType(request.getCreationType());
+    }
 
     // 저장
     Post updated = postRepository.save(draft);
@@ -509,6 +531,7 @@ public class PostService {
 
   // ✅ Post 엔티티 → PostResponseDto 변환 (기본: hasPurchased = false)
   public PostResponseDto toPostResponseDto(Post post) {
+
     return toPostResponseDto(post, false); // 기본값 false
   }
 
