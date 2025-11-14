@@ -1,14 +1,15 @@
 package com.likelion.nextworld.domain.user.service;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
 
-import com.likelion.nextworld.domain.post.entity.Post;
-import com.likelion.nextworld.domain.post.entity.Work;
-import com.likelion.nextworld.domain.post.entity.WorkStatus;
+import com.likelion.nextworld.domain.post.entity.*;
 import com.likelion.nextworld.domain.post.repository.PostRepository;
+import com.likelion.nextworld.domain.post.repository.PostStatisticsRepository;
 import com.likelion.nextworld.domain.post.repository.WorkRepository;
+import com.likelion.nextworld.domain.post.repository.WorkStatisticsRepository;
 import com.likelion.nextworld.domain.user.dto.AuthorPostResponse;
 import com.likelion.nextworld.domain.user.dto.AuthorProfileResponse;
 import com.likelion.nextworld.domain.user.dto.AuthorWorkResponse;
@@ -24,6 +25,8 @@ public class AuthorService {
   private final UserRepository userRepository;
   private final WorkRepository workRepository;
   private final PostRepository postRepository;
+  private final WorkStatisticsRepository workStatisticsRepository;
+  private final PostStatisticsRepository postStatisticsRepository;
 
   public AuthorProfileResponse getAuthorProfile(Long authorId) {
     User author =
@@ -49,15 +52,43 @@ public class AuthorService {
         .map(
             work -> {
               List<String> tags =
-                  work.getTags().stream().map(workTag -> workTag.getTag().getName()).toList();
+                  work.getTags().stream().map(tag -> tag.getTag().getName()).toList();
+
+              Long parentWorkId = null;
+              String parentWorkTitle = null;
+              if (work.getParentWork() != null) {
+                parentWorkId = work.getParentWork().getId();
+                parentWorkTitle = work.getParentWork().getTitle();
+              }
+
+              WorkStatistics stats = workStatisticsRepository.findById(work.getId()).orElse(null);
+
+              Long totalLikesCount = 0L;
+              Long totalViewsCount = 0L;
+              BigDecimal totalRating = null;
+
+              if (stats != null) {
+                totalLikesCount = stats.getTotalLikesCount();
+                totalViewsCount = stats.getTotalViewsCount();
+                totalRating = stats.getTotalRating();
+              }
 
               return AuthorWorkResponse.builder()
-                  .workId(work.getId())
+                  .id(work.getId())
+                  .workType(work.getWorkType())
                   .title(work.getTitle())
+                  .description(work.getDescription())
                   .coverImageUrl(work.getCoverImageUrl())
                   .category(work.getCategory())
-                  .workType(work.getWorkType().name())
+                  .serializationSchedule(work.getSerializationSchedule())
+                  .allowDerivative(work.getAllowDerivative())
                   .tags(tags)
+                  .totalLikesCount(totalLikesCount)
+                  .totalViewsCount(totalViewsCount)
+                  .totalRating(totalRating)
+                  .authorName(work.getAuthor().getNickname())
+                  .parentWorkId(parentWorkId)
+                  .parentWorkTitle(parentWorkTitle)
                   .build();
             })
         .toList();
@@ -75,17 +106,54 @@ public class AuthorService {
     return posts.stream()
         .map(
             post -> {
-              String thumbnail = post.getWork() != null ? post.getWork().getCoverImageUrl() : null;
-
               List<String> tags =
-                  post.getTags().stream().map(postTag -> postTag.getTag().getName()).toList();
+                  post.getTags().stream().map(tag -> tag.getTag().getName()).toList();
+
+              Long workId = post.getWork() != null ? post.getWork().getId() : null;
+              String workTitle = post.getWork() != null ? post.getWork().getTitle() : null;
+
+              Long parentWorkId = null;
+              String parentWorkTitle = null;
+
+              if (post.getWork() != null && post.getWork().getParentWork() != null) {
+                parentWorkId = post.getWork().getParentWork().getId();
+                parentWorkTitle = post.getWork().getParentWork().getTitle();
+              }
+
+              PostStatistics stats = postStatisticsRepository.findById(post.getId()).orElse(null);
+
+              Long viewsCount = 0L;
+              Long commentsCount = 0L;
+              BigDecimal rating = null;
+
+              if (stats != null) {
+                viewsCount = stats.getViewsCount();
+                commentsCount = stats.getCommentsCount();
+                rating = stats.getRating();
+              }
 
               return AuthorPostResponse.builder()
-                  .postId(post.getId())
-                  .workId(post.getWork() != null ? post.getWork().getId() : null)
+                  .id(post.getId())
                   .title(post.getTitle())
-                  .thumbnailUrl(thumbnail)
+                  .hasImage(post.getHasImage())
+                  .workId(workId)
+                  .workTitle(workTitle)
+                  .postType(post.getPostType())
+                  .episodeNumber(post.getEpisodeNumber())
+                  .parentWorkId(parentWorkId)
+                  .parentWorkTitle(parentWorkTitle)
+                  .authorName(post.getAuthor().getNickname())
+                  .creationType(post.getCreationType())
+                  .isPaid(post.getIsPaid())
+                  .price(post.getPrice())
                   .tags(tags)
+                  .viewsCount(viewsCount)
+                  .commentsCount(commentsCount)
+                  .rating(rating)
+                  .status(post.getStatus())
+                  .aiCheck(post.getAiCheck())
+                  .createdAt(post.getCreatedAt())
+                  .updatedAt(post.getUpdatedAt())
                   .build();
             })
         .toList();
